@@ -6,25 +6,7 @@ import fs from 'fs';
 
 const router = Router();
 
-const isVercel = !!process.env.VERCEL || process.cwd().includes('task') || process.cwd().includes('vercel');
-const baseUploadsDir = isVercel ? '/tmp/uploads' : path.join(process.cwd(), 'uploads');
-const uploadsDir = path.join(baseUploadsDir, 'brands');
-
-try {
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-} catch (error) {
-  console.warn('[brands.ts] Could not create uploads directory:', error);
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
-  }
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -108,7 +90,8 @@ router.post('/upload-image', upload.single('image'), (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: 'Nenhuma imagem enviada.' });
     }
-    const url = `/uploads/brands/${req.file.filename}`;
+    const base64Image = req.file.buffer.toString('base64');
+    const url = `data:${req.file.mimetype};base64,${base64Image}`;
     res.json({ url });
   } catch (error) {
     console.error('Error uploading brand image:', error);

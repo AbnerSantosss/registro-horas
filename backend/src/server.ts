@@ -33,11 +33,6 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/platforms', platformRoutes);
 app.use('/api/brands', brandRoutes);
 
-// Serve uploaded files conditionally
-const isVercel = !!process.env.VERCEL || process.cwd().includes('task') || process.cwd().includes('vercel');
-const uploadsDir = isVercel ? '/tmp/uploads' : path.resolve(process.cwd(), 'uploads');
-app.use('/uploads', express.static(uploadsDir));
-
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', ambiente: process.env.NODE_ENV });
 });

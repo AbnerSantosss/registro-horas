@@ -7,26 +7,7 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
-// Setup Multer for Icons
-const isVercel = !!process.env.VERCEL || process.env.NODE_ENV === 'production' || process.cwd().includes('task') || process.cwd().includes('vercel');
-const baseUploadsDir = isVercel ? '/tmp/uploads' : path.resolve(process.cwd(), 'uploads');
-const uploadsDir = path.join(baseUploadsDir, 'platforms');
-
-try {
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-} catch (error) {
-  console.warn('[platforms.ts] Could not create uploads directory:', error);
-}
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}${ext}`);
-  },
-});
+const storage = multer.memoryStorage();
 const uploadIcon = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
@@ -120,7 +101,8 @@ router.post('/upload-icon', uploadIcon.single('icon'), (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    const iconUrl = `/uploads/platforms/${req.file.filename}`;
+    const base64Image = req.file.buffer.toString('base64');
+    const iconUrl = `data:${req.file.mimetype};base64,${base64Image}`;
     res.json({ url: iconUrl });
   } catch (error) {
     console.error('Upload icon error:', error);
