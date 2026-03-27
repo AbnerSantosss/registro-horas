@@ -15,7 +15,7 @@ model User {
   role         String   @db.VarChar(50)
   position     String   @db.VarChar(255)
   brands       String   @default("[]") @db.VarChar(2000)
-  avatarUrl    String?  @map("avatar_url") @db.VarChar(500)
+  avatarUrl    String?  @map("avatar_url") @db.LongText
   createdAt    DateTime @default(now()) @map("created_at")
 
   assignedTasks  Task[]          @relation("TaskAssignee")

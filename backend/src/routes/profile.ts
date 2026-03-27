@@ -8,18 +8,7 @@ import { authenticate, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 
-const uploadsDir = path.resolve(import.meta.dirname, '..', '..', 'uploads', 'avatars');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (req: AuthRequest, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${req.user?.id}${ext}`);
-  },
-});
+const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 },
@@ -92,7 +81,9 @@ router.post('/avatar', authenticate, upload.single('avatar'), async (req: AuthRe
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    const base64Image = req.file.buffer.toString('base64');
+    const avatarUrl = `data:${req.file.mimetype};base64,${base64Image}`;
+
     const user = await prisma.user.update({
       where: { id: req.user!.id },
       data: { avatarUrl },
