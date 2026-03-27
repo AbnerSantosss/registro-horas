@@ -15,6 +15,7 @@ import taskRoutes from './routes/tasks.js';
 import userRoutes from './routes/users.js';
 import tagRoutes from './routes/tags.js';
 import profileRoutes from './routes/profile.js';
+import platformRoutes from './routes/platforms.js';
 
 
 async function startServer() {
@@ -36,6 +37,7 @@ async function startServer() {
   app.use('/api/users', userRoutes);
   app.use('/api/tags', tagRoutes);
   app.use('/api/profile', profileRoutes);
+  app.use('/api/platforms', platformRoutes);
 
   // Serve uploaded files (avatars)
   const uploadsDir = path.resolve(__dirname, '..', 'uploads');

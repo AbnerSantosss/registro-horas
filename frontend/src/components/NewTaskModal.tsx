@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { TASK_BRANDS } from '../context/BrandContext';
 import { useTags } from '../context/TagContext';
+import { usePlatforms } from '../context/PlatformContext';
 import { X, Plus, Trash2, Layers, Target, Tag, Link2, Globe } from 'lucide-react';
 import { SiInstagram, SiYoutube, SiTiktok } from 'react-icons/si';
 import { FaXTwitter, FaLinkedin } from 'react-icons/fa6';
@@ -49,6 +50,7 @@ const PRIORITY_OPTIONS = [
 export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTaskModalProps) {
   const { token } = useAuth();
   const { tags } = useTags();
+  const { platforms } = usePlatforms();
   const [title, setTitle]           = useState('');
   const [description, setDescription] = useState('');
   const [deadline, setDeadline]     = useState('');
@@ -228,31 +230,58 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
               {/* ── Network picker com ícones ── */}
               <FormField label="Rede / Plataforma">
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {NETWORKS.map(n => {
-                    const meta = NETWORK_META[n];
-                    const isSelected = network === n;
-                    const IconComp = meta.icon;
-                    return (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => { setNetwork(isSelected ? '' : n); setFormat(''); }}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          padding: '0.4rem 0.85rem', borderRadius: 10,
-                          fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
-                          border: `1.5px solid ${isSelected ? meta.color : 'var(--border)'}`,
-                          background: isSelected ? meta.color + '18' : 'var(--surface-2)',
-                          color: isSelected ? meta.color : 'var(--text-2)',
-                          transition: 'all 180ms ease',
-                          boxShadow: isSelected ? `0 2px 8px ${meta.color}30` : 'none',
-                        }}
-                      >
-                        <IconComp size={16} color={isSelected ? meta.color : 'var(--text-3)'} />
-                        {meta.label}
-                      </button>
-                    );
-                  })}
+                  {platforms.length > 0 ? (
+                    platforms.map(p => {
+                      const isSelected = network === p.name;
+                      const IconComp = NETWORK_META[p.name]?.icon || Globe;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => { setNetwork(isSelected ? '' : p.name); setFormat(''); }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '0.4rem 0.85rem', borderRadius: 10,
+                            fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                            border: `1.5px solid ${isSelected ? p.color : 'var(--border)'}`,
+                            background: isSelected ? p.color + '18' : 'var(--surface-2)',
+                            color: isSelected ? p.color : 'var(--text-2)',
+                            transition: 'all 180ms ease',
+                            boxShadow: isSelected ? `0 2px 8px ${p.color}30` : 'none',
+                          }}
+                        >
+                          <IconComp size={16} color={isSelected ? p.color : 'var(--text-3)'} />
+                          {p.name}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    NETWORKS.map(n => {
+                      const meta = NETWORK_META[n];
+                      const isSelected = network === n;
+                      const IconComp = meta.icon || Globe;
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => { setNetwork(isSelected ? '' : n); setFormat(''); }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '0.4rem 0.85rem', borderRadius: 10,
+                            fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                            border: `1.5px solid ${isSelected ? (meta?.color || '#000') : 'var(--border)'}`,
+                            background: isSelected ? (meta?.color || '#000') + '18' : 'var(--surface-2)',
+                            color: isSelected ? (meta?.color || '#000') : 'var(--text-2)',
+                            transition: 'all 180ms ease',
+                            boxShadow: isSelected ? `0 2px 8px ${(meta?.color || '#000')}30` : 'none',
+                          }}
+                        >
+                          <IconComp size={16} color={isSelected ? (meta?.color || '#000') : 'var(--text-3)'} />
+                          {meta?.label || n}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </FormField>
 

@@ -57,6 +57,13 @@ export interface Tag {
   color: string;
 }
 
+export interface Platform {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+}
+
 export interface TimeEntry {
   id: string;
   task_id: string;

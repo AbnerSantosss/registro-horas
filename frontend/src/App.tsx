@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { BrandProvider } from './context/BrandContext';
 import { TagProvider } from './context/TagContext';
+import { PlatformProvider } from './context/PlatformContext';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -27,48 +28,50 @@ export default function App() {
       <AuthProvider>
         <BrandProvider>
           <TagProvider>
-            <Router>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Dashboard />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/team" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <Layout>
-                      <Team />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/reports" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <Layout>
-                      <Reports />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/settings" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <Layout>
-                      <Settings />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/profile" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Profile />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-              </Routes>
-            </Router>
+            <PlatformProvider>
+              <Router>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Dashboard />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/team" element={
+                    <ProtectedRoute requireAdmin={true}>
+                      <Layout>
+                        <Team />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/reports" element={
+                    <ProtectedRoute requireAdmin={true}>
+                      <Layout>
+                        <Reports />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <ProtectedRoute requireAdmin={true}>
+                      <Layout>
+                        <Settings />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/profile" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Profile />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                </Routes>
+              </Router>
+            </PlatformProvider>
           </TagProvider>
         </BrandProvider>
       </AuthProvider>
