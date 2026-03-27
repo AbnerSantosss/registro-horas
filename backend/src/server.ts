@@ -2,13 +2,10 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load .env from backend root (handles CWD being different from backend/)
-dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
+// Load .env relative to current working directory
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+}
 import { initDb } from './db.js';
 import authRoutes from './routes/auth.js';
 import taskRoutes from './routes/tasks.js';
@@ -36,8 +33,9 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/platforms', platformRoutes);
 app.use('/api/brands', brandRoutes);
 
-// Serve uploaded files (avatars) conditionally in dev
-const uploadsDir = path.resolve(__dirname, '..', 'uploads');
+// Serve uploaded files conditionally
+const isVercel = !!process.env.VERCEL || process.cwd().includes('task') || process.cwd().includes('vercel');
+const uploadsDir = isVercel ? '/tmp/uploads' : path.resolve(process.cwd(), 'uploads');
 app.use('/uploads', express.static(uploadsDir));
 
 app.get('/api/health', (_req, res) => {

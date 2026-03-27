@@ -8,9 +8,16 @@ import { authenticate } from '../middleware/auth.js';
 const router = Router();
 
 // Setup Multer for Icons
-const uploadsDir = path.resolve(import.meta.dirname, '..', '..', 'uploads', 'platforms');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+const isVercel = !!process.env.VERCEL || process.env.NODE_ENV === 'production' || process.cwd().includes('task') || process.cwd().includes('vercel');
+const baseUploadsDir = isVercel ? '/tmp/uploads' : path.resolve(process.cwd(), 'uploads');
+const uploadsDir = path.join(baseUploadsDir, 'platforms');
+
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (error) {
+  console.warn('[platforms.ts] Could not create uploads directory:', error);
 }
 
 const storage = multer.diskStorage({
