@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -178,4 +178,15 @@ model Platform {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("platforms")
+}
+
+model Brand {
+  id        String   @id @db.VarChar(191)
+  name      String   @db.VarChar(255)
+  color     String   @default("#6366f1") @db.VarChar(50)
+  logoUrl   String?  @map("logo_url") @db.VarChar(500)
+  iconUrl   String?  @map("icon_url") @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("brands")
 }

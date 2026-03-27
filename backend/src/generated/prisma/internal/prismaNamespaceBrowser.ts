@@ -60,7 +60,9 @@ export const ModelName = {
   TaskHistory: 'TaskHistory',
   Tag: 'Tag',
   TaskTag: 'TaskTag',
-  PasswordReset: 'PasswordReset'
+  PasswordReset: 'PasswordReset',
+  Platform: 'Platform',
+  Brand: 'Brand'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -213,6 +215,29 @@ export const PasswordResetScalarFieldEnum = {
 export type PasswordResetScalarFieldEnum = (typeof PasswordResetScalarFieldEnum)[keyof typeof PasswordResetScalarFieldEnum]
 
 
+export const PlatformScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  color: 'color',
+  icon: 'icon',
+  createdAt: 'createdAt'
+} as const
+
+export type PlatformScalarFieldEnum = (typeof PlatformScalarFieldEnum)[keyof typeof PlatformScalarFieldEnum]
+
+
+export const BrandScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  color: 'color',
+  logoUrl: 'logoUrl',
+  iconUrl: 'iconUrl',
+  createdAt: 'createdAt'
+} as const
+
+export type BrandScalarFieldEnum = (typeof BrandScalarFieldEnum)[keyof typeof BrandScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -342,4 +367,25 @@ export const PasswordResetOrderByRelevanceFieldEnum = {
 } as const
 
 export type PasswordResetOrderByRelevanceFieldEnum = (typeof PasswordResetOrderByRelevanceFieldEnum)[keyof typeof PasswordResetOrderByRelevanceFieldEnum]
+
+
+export const PlatformOrderByRelevanceFieldEnum = {
+  id: 'id',
+  name: 'name',
+  color: 'color',
+  icon: 'icon'
+} as const
+
+export type PlatformOrderByRelevanceFieldEnum = (typeof PlatformOrderByRelevanceFieldEnum)[keyof typeof PlatformOrderByRelevanceFieldEnum]
+
+
+export const BrandOrderByRelevanceFieldEnum = {
+  id: 'id',
+  name: 'name',
+  color: 'color',
+  logoUrl: 'logoUrl',
+  iconUrl: 'iconUrl'
+} as const
+
+export type BrandOrderByRelevanceFieldEnum = (typeof BrandOrderByRelevanceFieldEnum)[keyof typeof BrandOrderByRelevanceFieldEnum]
 

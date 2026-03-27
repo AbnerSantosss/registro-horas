@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { TASK_BRANDS } from '../context/BrandContext';
+import { useBrand } from '../context/BrandContext';
 import { useTags } from '../context/TagContext';
 import { usePlatforms } from '../context/PlatformContext';
 import { X, Plus, Trash2, Layers, Target, Tag, Link2, Globe } from 'lucide-react';
-import { SiInstagram, SiYoutube, SiTiktok } from 'react-icons/si';
+import { SiInstagram, SiYoutube, SiTiktok, SiFacebook, SiPinterest } from 'react-icons/si';
 import { FaXTwitter, FaLinkedin } from 'react-icons/fa6';
 import type { IconType } from 'react-icons';
 
@@ -34,11 +34,20 @@ interface NetworkMeta {
 
 const NETWORK_META: Record<string, NetworkMeta> = {
   'Instagram': { icon: SiInstagram, color: '#E1306C', label: 'Instagram' },
+  'instagram': { icon: SiInstagram, color: '#E1306C', label: 'Instagram' },
   'YouTube':   { icon: SiYoutube,   color: '#FF0000', label: 'YouTube' },
+  'youtube':   { icon: SiYoutube,   color: '#FF0000', label: 'YouTube' },
   'Site':      { icon: Globe as any, color: '#6366f1', label: 'Site' },
   'X (Twitter)': { icon: FaXTwitter, color: '#000000', label: 'X (Twitter)' },
+  'twitter': { icon: FaXTwitter, color: '#000000', label: 'X (Twitter)' },
   'TikTok':    { icon: SiTiktok,    color: '#010101', label: 'TikTok' },
+  'tiktok':    { icon: SiTiktok,    color: '#010101', label: 'TikTok' },
   'LinkedIn':  { icon: FaLinkedin,  color: '#0A66C2', label: 'LinkedIn' },
+  'linkedin':  { icon: FaLinkedin,  color: '#0A66C2', label: 'LinkedIn' },
+  'facebook':  { icon: SiFacebook,  color: '#1877F2', label: 'Facebook' },
+  'Facebook':  { icon: SiFacebook,  color: '#1877F2', label: 'Facebook' },
+  'pinterest': { icon: SiPinterest, color: '#E60023', label: 'Pinterest' },
+  'Pinterest': { icon: SiPinterest, color: '#E60023', label: 'Pinterest' },
 };
 
 const PRIORITY_OPTIONS = [
@@ -51,6 +60,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
   const { token } = useAuth();
   const { tags } = useTags();
   const { platforms } = usePlatforms();
+  const { brands } = useBrand();
   const [title, setTitle]           = useState('');
   const [description, setDescription] = useState('');
   const [deadline, setDeadline]     = useState('');
@@ -172,7 +182,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                 <FormField label="Marca / Cliente">
                   <select value={brand} onChange={e => setBrand(e.target.value)} className="form-input">
                     <option value="">Selecione...</option>
-                    {TASK_BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
+                    {brands.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
                   </select>
                 </FormField>
                 <FormField label="Prazo de Entrega">
@@ -233,7 +243,8 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                   {platforms.length > 0 ? (
                     platforms.map(p => {
                       const isSelected = network === p.name;
-                      const IconComp = NETWORK_META[p.name]?.icon || Globe;
+                      const IconComp = NETWORK_META[p.icon]?.icon || NETWORK_META[p.name]?.icon || NETWORK_META[p.name.toLowerCase()]?.icon || Globe;
+                      const isCustomIcon = p.icon?.startsWith('/uploads/');
                       return (
                         <button
                           key={p.id}
@@ -244,13 +255,17 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                             padding: '0.4rem 0.85rem', borderRadius: 10,
                             fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
                             border: `1.5px solid ${isSelected ? p.color : 'var(--border)'}`,
-                            background: isSelected ? p.color + '18' : 'var(--surface-2)',
+                            background: isSelected ? p.color + '25' : 'var(--surface-2)',
                             color: isSelected ? p.color : 'var(--text-2)',
-                            transition: 'all 180ms ease',
-                            boxShadow: isSelected ? `0 2px 8px ${p.color}30` : 'none',
+                            transition: 'all 150ms',
+                            opacity: isSelected ? 1 : 0.85
                           }}
                         >
-                          <IconComp size={16} color={isSelected ? p.color : 'var(--text-3)'} />
+                          {isCustomIcon ? (
+                             <img src={p.icon} alt={p.name} style={{ width: 14, height: 14, objectFit: 'contain', filter: isSelected ? `drop-shadow(0px 0px 4px ${p.color}80)` : 'grayscale(100%) opacity(50%)' }} />
+                          ) : (
+                             <IconComp size={14} color={isSelected ? p.color : 'var(--text-3)'} />
+                          )}
                           {p.name}
                         </button>
                       );

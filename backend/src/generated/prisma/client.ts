@@ -91,3 +91,13 @@ export type TaskTag = Prisma.TaskTagModel
  * 
  */
 export type PasswordReset = Prisma.PasswordResetModel
+/**
+ * Model Platform
+ * 
+ */
+export type Platform = Prisma.PlatformModel
+/**
+ * Model Brand
+ * 
+ */
+export type Brand = Prisma.BrandModel

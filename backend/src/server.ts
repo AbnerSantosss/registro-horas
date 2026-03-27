@@ -16,40 +16,41 @@ import userRoutes from './routes/users.js';
 import tagRoutes from './routes/tags.js';
 import profileRoutes from './routes/profile.js';
 import platformRoutes from './routes/platforms.js';
+import brandRoutes from './routes/brands.js';
 
+const app = express();
+const PORT = process.env.PORT || 3001;
 
-async function startServer() {
-  // Ensure default admin user exists
-  await initDb();
+app.use(cors({
+  origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+}));
+app.use(express.json());
 
-  const app = express();
-  const PORT = process.env.PORT || 3001;
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/tags', tagRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/platforms', platformRoutes);
+app.use('/api/brands', brandRoutes);
 
-  app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
-    credentials: true,
-  }));
-  app.use(express.json());
+// Serve uploaded files (avatars) conditionally in dev
+const uploadsDir = path.resolve(__dirname, '..', 'uploads');
+app.use('/uploads', express.static(uploadsDir));
 
-  // API Routes
-  app.use('/api/auth', authRoutes);
-  app.use('/api/tasks', taskRoutes);
-  app.use('/api/users', userRoutes);
-  app.use('/api/tags', tagRoutes);
-  app.use('/api/profile', profileRoutes);
-  app.use('/api/platforms', platformRoutes);
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', ambiente: process.env.NODE_ENV });
+});
 
-  // Serve uploaded files (avatars)
-  const uploadsDir = path.resolve(__dirname, '..', 'uploads');
-  app.use('/uploads', express.static(uploadsDir));
-
-  app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok' });
-  });
-
-  app.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`Backend running on http://localhost:${PORT}`);
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  initDb().then(() => {
+    app.listen(Number(PORT), '0.0.0.0', () => {
+      console.log(`Backend running on http://localhost:${PORT}`);
+    });
   });
 }
 
-startServer();
+// Export the express app for Vercel
+export default app;

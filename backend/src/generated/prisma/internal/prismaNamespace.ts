@@ -393,7 +393,9 @@ export const ModelName = {
   TaskHistory: 'TaskHistory',
   Tag: 'Tag',
   TaskTag: 'TaskTag',
-  PasswordReset: 'PasswordReset'
+  PasswordReset: 'PasswordReset',
+  Platform: 'Platform',
+  Brand: 'Brand'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -409,7 +411,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "task" | "taskStep" | "timeEntry" | "comment" | "notification" | "taskHistory" | "tag" | "taskTag" | "passwordReset"
+    modelProps: "user" | "task" | "taskStep" | "timeEntry" | "comment" | "notification" | "taskHistory" | "tag" | "taskTag" | "passwordReset" | "platform" | "brand"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1073,6 +1075,138 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Platform: {
+      payload: Prisma.$PlatformPayload<ExtArgs>
+      fields: Prisma.PlatformFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PlatformFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PlatformFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformPayload>
+        }
+        findFirst: {
+          args: Prisma.PlatformFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PlatformFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformPayload>
+        }
+        findMany: {
+          args: Prisma.PlatformFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformPayload>[]
+        }
+        create: {
+          args: Prisma.PlatformCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformPayload>
+        }
+        createMany: {
+          args: Prisma.PlatformCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.PlatformDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformPayload>
+        }
+        update: {
+          args: Prisma.PlatformUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformPayload>
+        }
+        deleteMany: {
+          args: Prisma.PlatformDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PlatformUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.PlatformUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformPayload>
+        }
+        aggregate: {
+          args: Prisma.PlatformAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePlatform>
+        }
+        groupBy: {
+          args: Prisma.PlatformGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PlatformCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformCountAggregateOutputType> | number
+        }
+      }
+    }
+    Brand: {
+      payload: Prisma.$BrandPayload<ExtArgs>
+      fields: Prisma.BrandFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.BrandFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BrandPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.BrandFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BrandPayload>
+        }
+        findFirst: {
+          args: Prisma.BrandFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BrandPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.BrandFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BrandPayload>
+        }
+        findMany: {
+          args: Prisma.BrandFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BrandPayload>[]
+        }
+        create: {
+          args: Prisma.BrandCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BrandPayload>
+        }
+        createMany: {
+          args: Prisma.BrandCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.BrandDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BrandPayload>
+        }
+        update: {
+          args: Prisma.BrandUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BrandPayload>
+        }
+        deleteMany: {
+          args: Prisma.BrandDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.BrandUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.BrandUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BrandPayload>
+        }
+        aggregate: {
+          args: Prisma.BrandAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateBrand>
+        }
+        groupBy: {
+          args: Prisma.BrandGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BrandGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.BrandCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BrandCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1246,6 +1380,29 @@ export const PasswordResetScalarFieldEnum = {
 export type PasswordResetScalarFieldEnum = (typeof PasswordResetScalarFieldEnum)[keyof typeof PasswordResetScalarFieldEnum]
 
 
+export const PlatformScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  color: 'color',
+  icon: 'icon',
+  createdAt: 'createdAt'
+} as const
+
+export type PlatformScalarFieldEnum = (typeof PlatformScalarFieldEnum)[keyof typeof PlatformScalarFieldEnum]
+
+
+export const BrandScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  color: 'color',
+  logoUrl: 'logoUrl',
+  iconUrl: 'iconUrl',
+  createdAt: 'createdAt'
+} as const
+
+export type BrandScalarFieldEnum = (typeof BrandScalarFieldEnum)[keyof typeof BrandScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -1375,6 +1532,27 @@ export const PasswordResetOrderByRelevanceFieldEnum = {
 } as const
 
 export type PasswordResetOrderByRelevanceFieldEnum = (typeof PasswordResetOrderByRelevanceFieldEnum)[keyof typeof PasswordResetOrderByRelevanceFieldEnum]
+
+
+export const PlatformOrderByRelevanceFieldEnum = {
+  id: 'id',
+  name: 'name',
+  color: 'color',
+  icon: 'icon'
+} as const
+
+export type PlatformOrderByRelevanceFieldEnum = (typeof PlatformOrderByRelevanceFieldEnum)[keyof typeof PlatformOrderByRelevanceFieldEnum]
+
+
+export const BrandOrderByRelevanceFieldEnum = {
+  id: 'id',
+  name: 'name',
+  color: 'color',
+  logoUrl: 'logoUrl',
+  iconUrl: 'iconUrl'
+} as const
+
+export type BrandOrderByRelevanceFieldEnum = (typeof BrandOrderByRelevanceFieldEnum)[keyof typeof BrandOrderByRelevanceFieldEnum]
 
 
 
@@ -1522,6 +1700,8 @@ export type GlobalOmitConfig = {
   tag?: Prisma.TagOmit
   taskTag?: Prisma.TaskTagOmit
   passwordReset?: Prisma.PasswordResetOmit
+  platform?: Prisma.PlatformOmit
+  brand?: Prisma.BrandOmit
 }
 
 /* Types for Logging */

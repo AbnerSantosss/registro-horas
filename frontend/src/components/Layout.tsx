@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useBrand, ADMIN_BRANDS, BrandOption } from '../context/BrandContext';
+import { useBrand, BrandOption } from '../context/BrandContext';
 import { LogOut, LayoutDashboard, Users, Moon, Sun, FileText, ChevronDown, Settings } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -17,14 +17,13 @@ const NAV_ITEMS_ADMIN = [
 
 /** Helper: retorna o logo correto para o tema atual */
 function useBrandLogo(brand: BrandOption | null, type: 'logo' | 'icon' = 'logo') {
-  const { theme } = useTheme();
   if (!brand) return null;
-  return theme === 'dark' ? brand[type].dark : brand[type].light;
+  return type === 'logo' ? brand.logoUrl : brand.iconUrl;
 }
 
 /** Select de marca para admins */
 function BrandSelector() {
-  const { selectedBrand, setSelectedBrand } = useBrand();
+  const { brands, selectedBrand, setSelectedBrand } = useBrand();
   const { theme } = useTheme();
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
@@ -42,8 +41,7 @@ function BrandSelector() {
     setOpen(false);
   };
 
-  const getIcon = (brand: BrandOption) =>
-    theme === 'dark' ? brand.icon.dark : brand.icon.light;
+  const getIcon = (brand: BrandOption) => brand.iconUrl || '/logos/icon_geralbet_azul.png';
 
   return (
     <div ref={ref} className="relative px-2.5 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -64,11 +62,11 @@ function BrandSelector() {
             <>
               <img
                 src={getIcon(selectedBrand)}
-                alt={selectedBrand.label}
+                alt={selectedBrand.name}
                 className="w-5 h-5 rounded object-contain"
                 onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
-              <span className="truncate">{selectedBrand.label}</span>
+              <span className="truncate">{selectedBrand.name}</span>
             </>
           ) : (
             <span style={{ color: 'var(--text-3)' }}>Todas as marcas</span>
@@ -101,7 +99,7 @@ function BrandSelector() {
           >
             Todas as marcas
           </button>
-          {ADMIN_BRANDS.map(brand => (
+          {brands.map(brand => (
             <button
               key={brand.id}
               onClick={() => choose(brand)}
@@ -110,11 +108,11 @@ function BrandSelector() {
             >
               <img
                 src={getIcon(brand)}
-                alt={brand.label}
+                alt={brand.name}
                 className="w-5 h-5 rounded object-contain"
                 onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
-              {brand.label}
+              {brand.name}
             </button>
           ))}
         </div>
@@ -138,7 +136,7 @@ function SidebarLogo() {
         {isAdmin && selectedBrand && logoSrc ? (
           <img
             src={logoSrc}
-            alt={selectedBrand.label}
+            alt={selectedBrand.name}
             className="h-8 w-auto max-w-[120px] object-contain"
             onError={e => {
               (e.target as HTMLImageElement).style.display = 'none';

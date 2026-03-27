@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useBrand, ADMIN_BRANDS } from '../context/BrandContext';
+import { useBrand } from '../context/BrandContext';
 import { Task } from '../types';
 import {
   PlayCircle, PauseCircle, CheckCircle2, Clock, User as UserIcon,
@@ -31,9 +31,7 @@ const PRIORITY_STYLE: Record<string, { bg: string; color: string }> = {
 
 /* ─── Brand filter pills ──────────────────────────────────── */
 function BrandFilterPills() {
-  const { selectedBrand, setSelectedBrand } = useBrand();
-  const { theme } = useTheme();
-  const variant = theme === 'dark' ? 'dark' : 'light';
+  const { brands, selectedBrand, setSelectedBrand } = useBrand();
 
   const pillBase: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -58,13 +56,13 @@ function BrandFilterPills() {
       </button>
 
       {/* Brand icon pills */}
-      {ADMIN_BRANDS.map(b => {
+      {brands.map(b => {
         const active = selectedBrand?.id === b.id;
         return (
           <button
             key={b.id}
             onClick={() => setSelectedBrand(active ? null : b)}
-            title={b.label}
+            title={b.name}
             style={{
               ...pillBase,
               background: active ? 'var(--brand-500)' : 'var(--surface-2)',
@@ -72,13 +70,13 @@ function BrandFilterPills() {
             }}
           >
             <img
-              src={b.icon[variant]}
-              alt={b.label}
+              src={b.iconUrl || '/logos/icon_geralbet_azul.png'}
+              alt={b.name}
               style={{
                 height: 18,
                 width: 'auto',
                 objectFit: 'contain',
-                filter: active ? 'brightness(0) invert(1)' : 'none',
+                filter: active ? 'brightness(0) invert(1)' : 'grayscale(100%) opacity(70%)',
               }}
             />
           </button>
@@ -274,7 +272,7 @@ export default function Dashboard() {
     return hasMyStep ? 'done' : task.status;
   };
 
-  const visibleTasks = selectedBrand ? tasks.filter(t => (t as any).brand === selectedBrand.label) : tasks;
+  const visibleTasks = selectedBrand ? tasks.filter(t => (t as any).brand === selectedBrand.name) : tasks;
 
   if (loading) return (
     <div className="flex h-full items-center justify-center" style={{ color: 'var(--text-3)' }}>

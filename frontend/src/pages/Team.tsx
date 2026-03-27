@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { TASK_BRANDS } from '../context/BrandContext';
+import { useBrand } from '../context/BrandContext';
 import { UserPlus, Users, Shield, Briefcase, Mail, X, Tag, KeyRound, UserCheck, Eye, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 
 const COLORS = ['#818cf8','#34d399','#fb923c','#f472b6','#60a5fa','#a78bfa','#2dd4bf'];
@@ -57,6 +57,7 @@ export default function Team() {
   const [users, setUsers]         = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
   const [isModalOpen, setIsOpen]  = useState(false);
+  const { brands }                = useBrand();
   const [name, setName]           = useState('');
   const [email, setEmail]         = useState('');
   const [password, setPassword]   = useState('');
@@ -456,7 +457,8 @@ export default function Team() {
                   background: 'var(--surface-2)', border: '1px solid var(--border)',
                   borderRadius: 10, padding: '10px 12px'
                 }}>
-                  {TASK_BRANDS.map(b => {
+                  {brands.map(brandObj => {
+                    const b = brandObj.name;
                     const checked = selectedBrands.includes(b);
                     return (
                       <label key={b} style={{
@@ -578,7 +580,8 @@ export default function Team() {
                   background: 'var(--surface-2)', border: '1px solid var(--border)',
                   borderRadius: 10, padding: '10px 12px'
                 }}>
-                  {TASK_BRANDS.map(b => {
+                  {brands.map(brandObj => {
+                    const b = brandObj.name;
                     const checked = editBrands.includes(b);
                     return (
                       <label key={b} style={{
