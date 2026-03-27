@@ -142,3 +142,44 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<{ succes
     return { success: false, error: err.message || 'Unknown email error' };
   }
 }
+
+export async function sendPasswordResetEmail(email: string, resetCode: string): Promise<{ success: boolean; error?: string }> {
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+
+  if (!gmailUser || !gmailPass) {
+    console.warn('⚠️ GMAIL_USER ou GMAIL_APP_PASSWORD não configurados. Email de reset não enviado.');
+    return { success: false, error: 'Gmail credentials not configured' };
+  }
+
+  try {
+    const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:20px;font-family:Arial,sans-serif;background:#f4f4f5;color:#18181b;">
+  <div style="max-width:500px;margin:0 auto;background:#fff;padding:30px;border-radius:10px;text-align:center;box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1);">
+    <h2 style="color:#dc2626;margin-top:0;">Recuperação de Senha</h2>
+    <p>Você solicitou a redefinição de senha para a sua conta.</p>
+    <p style="margin:25px 0;">Seu código de recuperação é:</p>
+    <div style="font-size:32px;font-weight:bold;letter-spacing:5px;color:#dc2626;background:#fef2f2;padding:15px;border-radius:8px;border:1px dashed #f87171;">
+      ${resetCode}
+    </div>
+    <p style="margin-top:25px;font-size:14px;color:#71717a;">Este código é válido por 30 minutos.<br>Se você não solicitou isso, ignore este email.</p>
+  </div>
+</body>
+</html>`;
+
+    await getTransporter().sendMail({
+      from: `LOGAME <${gmailUser}>`,
+      to: email,
+      subject: 'LOGAME — Código de Recuperação de Senha',
+      html,
+    });
+    console.log(`✅ Password reset email sent to ${email}`);
+    return { success: true };
+  } catch (err: any) {
+    console.error('❌ Password reset email send failed:', err.message);
+    return { success: false, error: err.message || 'Unknown email error' };
+  }
+}

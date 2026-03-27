@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import prisma from '../prisma.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
-
+import { sendPasswordResetEmail } from '../services/emailService.js';
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-in-prod';
 const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -132,6 +132,7 @@ router.post('/forgot-password', async (req, res) => {
     // In production, send resetCode via email (SMTP/Resend/SendGrid)
     // For local development, the code is printed in the server console
     console.log(`[DEV] Password reset code for ${email}: ${resetCode}`);
+    await sendPasswordResetEmail(email, resetCode);
 
     res.json({
       message: 'Token de redefinição gerado com sucesso.',
