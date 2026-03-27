@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Mail, Lock, AlertCircle,
   ClipboardList, Timer, BarChart3, Users,
+  Eye, EyeOff
 } from 'lucide-react';
 
 /* ─── Design tokens ─────────────────────────── */
@@ -88,9 +89,10 @@ const S: Record<string, CSSProperties> = {
 
 /* ─── Component ─────────────────────────────── */
 export default function Login() {
-  const [email,      setEmail]      = useState('');
+  const [email,      setEmail]      = useState(() => localStorage.getItem('savedEmail') || '');
   const [password,   setPassword]   = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('savedEmail'));
+  const [showPassword, setShowPassword] = useState(false);
   const [error,      setError]      = useState('');
   const [loading,    setLoading]    = useState(false);
   const { login }    = useAuth();
@@ -116,7 +118,15 @@ export default function Login() {
         body: JSON.stringify({ email, password, rememberMe }),
       });
       const data = await res.json();
-      if (res.ok) { login(data.token, data.user, rememberMe); navigate('/'); }
+      if (res.ok) { 
+        if (rememberMe) {
+          localStorage.setItem('savedEmail', email);
+        } else {
+          localStorage.removeItem('savedEmail');
+        }
+        login(data.token, data.user, rememberMe); 
+        navigate('/'); 
+      }
       else setError(data.error || 'Email ou senha inválidos.');
     } catch {
       setError('Erro de conexão. Tente novamente.');
@@ -224,10 +234,21 @@ export default function Login() {
               <label style={S.label}>Senha</label>
               <div style={S.field}>
                 <Lock size={15} style={S.icon} />
-                <input type="password" required autoComplete="current-password" placeholder="••••••••"
+                <input type={showPassword ? "text" : "password"} required autoComplete="current-password" placeholder="••••••••"
                   value={password} onChange={e => setPassword(e.target.value)}
-                  style={S.input} onFocus={onFocus} onBlur={onBlur}
+                  style={{ ...S.input, paddingRight: 40 }} onFocus={onFocus} onBlur={onBlur}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                    color: C.text3, display: 'flex'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
               </div>
             </div>
 

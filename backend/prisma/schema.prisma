@@ -169,3 +169,13 @@ model PasswordReset {
 
   @@map("password_resets")
 }
+
+model Platform {
+  id        String   @id @db.VarChar(191)
+  name      String   @db.VarChar(255)
+  color     String   @default("#000000") @db.VarChar(50)
+  icon      String   @default("link") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("platforms")
+}
