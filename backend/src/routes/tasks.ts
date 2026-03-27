@@ -106,6 +106,33 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
       accumulatedMap.set(e.taskId, e._sum?.duration ?? 0);
     }
 
+    // Capture time spent specifically per user per task
+    const userTimes = await prisma.timeEntry.groupBy({
+      by: ['taskId', 'userId'],
+      where: {
+        status: { in: ['paused', 'stopped'] },
+        duration: { gt: 0 },
+        ...(role !== 'admin' ? { userId } : {}),
+      },
+      _sum: { duration: true },
+    });
+    
+    const userIdsForTime = [...new Set(userTimes.map(u => u.userId))];
+    const timeUsersCache = await prisma.user.findMany({
+      where: { id: { in: userIdsForTime } },
+      select: { id: true, name: true }
+    });
+    const timeUsersMap = new Map(timeUsersCache.map(u => [u.id, u.name]));
+
+    const userTimesByTask = new Map<string, { user_name: string, seconds: number }[]>();
+    for (const ut of userTimes) {
+      if (!userTimesByTask.has(ut.taskId)) userTimesByTask.set(ut.taskId, []);
+      userTimesByTask.get(ut.taskId)?.push({
+        user_name: timeUsersMap.get(ut.userId) || 'Unknown',
+        seconds: ut._sum?.duration ?? 0,
+      });
+    }
+
     const result = tasks.map(t => ({
       id: t.id,
       title: t.title,
@@ -130,6 +157,7 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
       total_steps: t.steps.length,
       active_start_time: activeMap.get(t.id) || null,
       accumulated_seconds: accumulatedMap.get(t.id) || 0,
+      user_times: userTimesByTask.get(t.id) || [],
       steps: t.steps.map(s => ({
         id: s.id,
         task_id: s.taskId,
@@ -246,7 +274,7 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
 router.put('/:id/status', authenticate, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const { status, material_link, comments } = req.body;
+    const { status, material_link, comments, pieces } = req.body;
     const userId = req.user?.id!;
 
     const task = await prisma.task.findUnique({ where: { id } });
@@ -289,6 +317,7 @@ router.put('/:id/status', authenticate, async (req: AuthRequest, res) => {
               completedAt: new Date(),
               materialLink: material_link || null,
               comments: comments || null,
+              pieces: pieces !== undefined ? parseInt(String(pieces)) : undefined,
             },
           });
         }
@@ -676,11 +705,17 @@ router.get('/stats', authenticate, async (req: AuthRequest, res) => {
         COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress,
         COUNT(CASE WHEN status = 'paused' THEN 1 END) as paused,
         COUNT(CASE WHEN status = 'done' THEN 1 END) as done,
-        COUNT(CASE WHEN deadline IS NOT NULL AND deadline < datetime('now') AND status != 'done' THEN 1 END) as overdue
+        COUNT(CASE WHEN deadline IS NOT NULL AND deadline < NOW() AND status != 'done' THEN 1 END) as overdue
       FROM tasks
     `);
 
     const stats = rows[0] ?? {};
+    
+    // Total pieces
+    const stepStats = await prisma.taskStep.aggregate({
+      _sum: { pieces: true },
+      where: { status: 'done' }
+    });
 
     res.json({
       total:       Number(stats.total       ?? 0),
@@ -689,6 +724,7 @@ router.get('/stats', authenticate, async (req: AuthRequest, res) => {
       paused:      Number(stats.paused      ?? 0),
       done:        Number(stats.done        ?? 0),
       overdue:     Number(stats.overdue     ?? 0),
+      total_pieces:Number(stepStats._sum.pieces ?? 0),
     });
   } catch (error) {
     console.error('Get stats error:', error);
@@ -696,23 +732,26 @@ router.get('/stats', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
-// Get reports (admin only) — uses raw SQL for julianday
+// Get reports (admin only) — updated for MySQL
 router.get('/reports', authenticate, async (req: AuthRequest, res) => {
   try {
     if (req.user?.role !== 'admin') {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const reports = await prisma.$queryRawUnsafe(`
+    const reports: any[] = await prisma.$queryRawUnsafe(`
       SELECT
+        u.id as user_id,
         u.name as user_name,
         t.id as task_id,
         t.title as task_title,
         t.status as task_status,
+        t.deadline as task_deadline,
+        t.type as task_type,
         SUM(
           CASE
             WHEN te.status = 'running'
-              THEN CAST((julianday('now') - julianday(te.start_time)) * 86400 AS INTEGER)
+              THEN TIMESTAMPDIFF(SECOND, te.start_time, NOW())
             ELSE COALESCE(te.duration, 0)
           END
         ) as total_duration,
@@ -731,7 +770,15 @@ router.get('/reports', authenticate, async (req: AuthRequest, res) => {
       ORDER BY total_duration DESC
     `);
 
-    res.json(reports);
+    // We also want to map the raw response back to expected numbers where sum is applied
+    const formatted = reports.map(r => ({
+      ...r,
+      total_duration: Number(r.total_duration ?? 0),
+      pause_count: Number(r.pause_count ?? 0),
+      total_pieces: Number(r.total_pieces ?? 0)
+    }));
+
+    res.json(formatted);
   } catch (error) {
     console.error('Get reports error:', error);
     res.status(500).json({ error: 'Internal server error' });

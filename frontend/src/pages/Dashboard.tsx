@@ -123,6 +123,7 @@ export default function Dashboard() {
   const [taskToComplete, setTaskToComplete] = useState<string | null>(null);
   const [materialLink, setMaterialLink]     = useState('');
   const [comments, setComments]             = useState('');
+  const [pieces, setPieces]                 = useState<number | ''>('');
   // Pause modal state
   const [pausingTaskId, setPausingTaskId]   = useState<string | null>(null);
   const [pauseReason, setPauseReason]       = useState('');
@@ -213,7 +214,7 @@ export default function Dashboard() {
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
     const newStatus = destination.droppableId;
-    if (newStatus === 'done') { setTaskToComplete(draggableId); setMaterialLink(''); setComments(''); return; }
+    if (newStatus === 'done') { setTaskToComplete(draggableId); setMaterialLink(''); setComments(''); setPieces(''); return; }
     setTasks(prev => {
       const arr = [...prev];
       const idx = arr.findIndex(t => t.id === draggableId);
@@ -260,10 +261,11 @@ export default function Dashboard() {
     const res = await fetch(`/api/tasks/${taskToComplete}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status: 'done', material_link: materialLink, comments }),
+      body: JSON.stringify({ status: 'done', material_link: materialLink, comments, pieces: pieces !== '' ? Number(pieces) : undefined }),
     });
     if (res.ok) fetchTasks();
     setTaskToComplete(null);
+    setPieces('');
   };
 
   const getColumn = (task: Task) => {
@@ -524,6 +526,24 @@ export default function Dashboard() {
                                   </button>
                                 </div>
 
+                                {/* Tempo Gasto por Usuário */}
+                                {task.user_times && task.user_times.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-2">
+                                    {task.user_times.map((ut, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px]"
+                                        style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}
+                                        title={`Tempo de ${ut.user_name}`}
+                                      >
+                                        <UserIcon size={9} />
+                                        <span>{ut.user_name}:</span>
+                                        <span className="font-mono font-semibold">{formatTime(ut.seconds)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
                                 {/* ── Timer + Actions footer ── */}
                                 <div
                                   className="pt-3 mt-1 space-y-2"
@@ -606,7 +626,7 @@ export default function Dashboard() {
 
                                         {/* Botão Tarefa Concluída — com texto nítido */}
                                         <button
-                                          onClick={() => { setTaskToComplete(task.id); setMaterialLink(''); setComments(''); }}
+                                          onClick={() => { setTaskToComplete(task.id); setMaterialLink(''); setComments(''); setPieces(''); }}
                                           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold ml-auto transition-all"
                                           style={{
                                             color: '#fff',
@@ -730,6 +750,19 @@ export default function Dashboard() {
                   placeholder="Notas sobre a execução desta etapa…"
                   value={comments}
                   onChange={e => setComments(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-1)' }}>
+                  Quantidade de Peças Produzidas <span style={{ color: 'var(--text-3)' }}>(opcional)</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  className="input-base"
+                  placeholder="Ex: 5"
+                  value={pieces}
+                  onChange={e => setPieces(e.target.value ? parseInt(e.target.value) : '')}
                 />
               </div>
             </div>

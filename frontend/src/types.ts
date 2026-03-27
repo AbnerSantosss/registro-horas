@@ -18,6 +18,7 @@ export interface TaskStep {
   comments?: string;
   completed_at?: string;
   user_name?: string;
+  pieces?: number;
 }
 
 export interface Task {
@@ -34,6 +35,7 @@ export interface Task {
   creator_name?: string;
   active_start_time?: string | null;
   accumulated_seconds?: number;
+  user_times?: { user_name: string; seconds: number }[];
   
   // New fields
   network?: string;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Eye, BarChart2, ClipboardList, CheckCircle2, Clock, AlertTriangle, PauseCircle, ListTodo } from 'lucide-react';
+import { Eye, BarChart2, ClipboardList, CheckCircle2, Clock, AlertTriangle, PauseCircle, ListTodo, Layers } from 'lucide-react';
 import TaskDetailsModal from '../components/TaskDetailsModal';
 import { Task } from '../types';
 
@@ -35,6 +35,7 @@ interface TaskStats {
   paused: number;
   done: number;
   overdue: number;
+  total_pieces: number;
 }
 
 /* ───── StatsCard ───── */
@@ -86,6 +87,7 @@ export default function Reports() {
   const [stats, setStats]         = useState<TaskStats | null>(null);
   const [loading, setLoading]     = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [activeTab, setActiveTab] = useState<'geral' | 'colaborador'>('geral');
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -129,6 +131,7 @@ export default function Reports() {
     { icon: PauseCircle,    label: 'Pausadas',          value: stats.paused,      accent: '#fbbf24' },
     { icon: CheckCircle2,   label: 'Concluídas',        value: stats.done,        accent: '#4ade80' },
     { icon: AlertTriangle,  label: 'Atrasadas',         value: stats.overdue,     accent: '#f87171' },
+    { icon: Layers,         label: 'Peças Produzidas',  value: stats.total_pieces, accent: '#c084fc' },
   ] : [];
 
   return (
@@ -144,21 +147,53 @@ export default function Reports() {
         </p>
       </div>
 
-      {/* ── Stats cards ─── */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {STAT_CARDS.map(card => (
-            <StatsCard key={card.label} {...card} />
-          ))}
+      {/* Tabs */}
+      <div className="flex gap-4 border-b mb-4" style={{ borderColor: 'var(--border)' }}>
+        <button
+          className={`pb-3 font-medium text-sm transition-colors border-b-2`}
+          style={{
+            borderColor: activeTab === 'geral' ? 'var(--brand-500)' : 'transparent',
+            color: activeTab === 'geral' ? 'var(--brand-500)' : 'var(--text-3)'
+          }}
+          onClick={() => setActiveTab('geral')}
+        >
+          Visão Geral
+        </button>
+        <button
+          className={`pb-3 font-medium text-sm transition-colors border-b-2`}
+          style={{
+            borderColor: activeTab === 'colaborador' ? 'var(--brand-500)' : 'transparent',
+            color: activeTab === 'colaborador' ? 'var(--brand-500)' : 'var(--text-3)'
+          }}
+          onClick={() => setActiveTab('colaborador')}
+        >
+          Por Colaborador
+        </button>
+      </div>
+
+      {activeTab === 'geral' && (
+        <div className="flex flex-col gap-6">
+          {/* ── Stats cards ─── */}
+          {stats && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+              {STAT_CARDS.map(card => (
+                <StatsCard key={card.label} {...card} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Time reports table ─── */}
-      <div>
-        <h2 className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-1)' }}>
-          <Clock size={16} style={{ color: 'var(--brand-500)' }} />
-          Tempo por Colaborador
-        </h2>
+      {activeTab === 'colaborador' && (
+        <div className="flex flex-col gap-6">
+          {/* ── Time reports table ─── */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold flex items-center gap-2" style={{ color: 'var(--text-1)' }}>
+                <Clock size={16} style={{ color: 'var(--brand-500)' }} />
+                Tempo por Colaborador
+              </h2>
+            </div>
 
         <div
           className="rounded-2xl overflow-hidden"
@@ -284,6 +319,8 @@ export default function Reports() {
           )}
         </div>
       </div>
+      </div>
+      )}
 
       <TaskDetailsModal isOpen={!!selectedTask} onClose={() => setSelectedTask(null)} task={selectedTask} />
     </div>
