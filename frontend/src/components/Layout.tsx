@@ -169,7 +169,9 @@ function SidebarLogo() {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
+  const { selectedBrand } = useBrand();
   const initial = user?.name?.charAt(0).toUpperCase() ?? '?';
+  const isCerteiro = selectedBrand?.name.toLowerCase().includes('certeiro');
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--surface-2)', color: 'var(--text-1)' }}>
@@ -306,7 +308,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           style={{
             position: 'absolute',
             inset: 0,
-            backgroundImage: 'url(/logos/background-logame.jpeg)',
+            backgroundImage: isCerteiro ? 'url(/logos/background-certeiro.png)' : 'url(/logos/background-logame.jpeg)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
