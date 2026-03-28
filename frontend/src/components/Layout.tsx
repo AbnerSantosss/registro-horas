@@ -174,13 +174,38 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isCerteiro = selectedBrand?.name.toLowerCase().includes('certeiro');
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--surface-2)', color: 'var(--text-1)' }}>
+    <div className="flex h-screen overflow-hidden relative" style={{ color: 'var(--text-1)' }}>
+      {/* Global Background com overlay */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: isCerteiro ? 'url(/logos/background-certeiro.png)' : 'url(/logos/background-logame.jpeg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          zIndex: 0,
+        }}
+      />
+      {/* Overlay escuro + blur universal */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'var(--bg-overlay, rgba(8, 11, 16, 0.88))',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          zIndex: 1,
+        }}
+      />
+
       {/* ── Sidebar ─────────────────────────────────── */}
       <aside
-        className="w-56 flex flex-col shrink-0 transition-colors"
+        className="w-56 flex flex-col shrink-0 transition-colors relative"
         style={{
-          background: 'var(--surface-1)',
+          background: 'rgba(0, 0, 0, 0.2)', // Semi-transparente para ver o background
           borderRight: '1px solid var(--border)',
+          zIndex: 2,
         }}
       >
         <SidebarLogo />
@@ -302,31 +327,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── Main ──────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Background LogaMe com overlay */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: isCerteiro ? 'url(/logos/background-certeiro.png)' : 'url(/logos/background-logame.jpeg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            zIndex: 0,
-          }}
-        />
-        {/* Overlay escuro + blur para não atrapalhar o conteúdo */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'var(--bg-overlay, rgba(8, 11, 16, 0.88))',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            zIndex: 1,
-          }}
-        />
-        <main className="flex-1 overflow-x-auto overflow-y-auto relative" style={{ zIndex: 2 }}>
+      <div className="flex-1 flex flex-col overflow-hidden relative" style={{ zIndex: 2 }}>
+        <main className="flex-1 overflow-x-auto overflow-y-auto relative">
           {children}
         </main>
       </div>
