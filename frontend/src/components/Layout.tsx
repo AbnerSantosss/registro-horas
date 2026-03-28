@@ -175,30 +175,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden relative" style={{ color: 'var(--text-1)' }}>
-      {/* Global Backgrounds preloaded for instant switching */}
+      {/* Global Background com overlay */}
       <div
+        className="transition-all duration-300"
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: 'url(/logos/background-logame.jpeg)',
+          backgroundImage: isCerteiro ? 'url(/logos/background-certeiro.jpg)' : 'url(/logos/background-logame.jpeg)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          opacity: isCerteiro ? 0 : 1,
-          transition: 'opacity 0.3s ease-in-out',
-          zIndex: 0,
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: 'url(/logos/background-certeiro.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          opacity: isCerteiro ? 1 : 0,
-          transition: 'opacity 0.3s ease-in-out',
           zIndex: 0,
         }}
       />
