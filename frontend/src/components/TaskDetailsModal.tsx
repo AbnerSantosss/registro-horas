@@ -23,7 +23,8 @@ const PRIORITY_STYLE: Record<string, { bg: string; color: string; label: string 
 };
 
 export default function TaskDetailsModal({ isOpen, onClose, task, onComplete, users, onTransfer }: TaskDetailsModalProps) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isSolicitante = user?.role === 'solicitante';
   const [comments, setComments]   = useState<any[]>([]);
   const [timeData, setTimeData]   = useState<{ total_seconds: number; entries: any[] } | null>(null);
   const [newComment, setNewComment] = useState('');
@@ -320,8 +321,9 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onComplete, us
           )}
 
           {/* Time tracking */}
-          <div>
-            <SectionLabel icon={<Clock size={13}/>} title="Tempo Gasto" />
+          {!isSolicitante && (
+            <div>
+              <SectionLabel icon={<Clock size={13}/>} title="Tempo Gasto" />
             <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-2)' }}>Total:</span>
@@ -351,6 +353,7 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onComplete, us
               )}
             </div>
           </div>
+          )}
 
           {/* Comments */}
           <div>
@@ -368,19 +371,21 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onComplete, us
                 </div>
               ))}
             </div>
-            <form onSubmit={handleAddComment} style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                type="text"
-                placeholder="Adicione um comentário ou link..."
-                value={newComment}
-                onChange={e => setNewComment(e.target.value)}
-                className="form-input"
-                style={{ flex: 1 }}
-              />
-              <button type="submit" disabled={loading || !newComment.trim()} className="btn-brand" style={{ flexShrink: 0, padding: '0 0.875rem' }}>
-                <Send size={16} />
-              </button>
-            </form>
+            {!isSolicitante && (
+              <form onSubmit={handleAddComment} style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="text"
+                  placeholder="Adicione um comentário ou link..."
+                  value={newComment}
+                  onChange={e => setNewComment(e.target.value)}
+                  className="form-input"
+                  style={{ flex: 1 }}
+                />
+                <button type="submit" disabled={loading || !newComment.trim()} className="btn-brand" style={{ flexShrink: 0, padding: '0 0.875rem' }}>
+                  <Send size={16} />
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>

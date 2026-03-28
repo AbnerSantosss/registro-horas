@@ -13,6 +13,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import Layout from './components/Layout';
+import SolicitanteDashboard from './pages/SolicitanteDashboard';
 
 const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) => {
   const { user, isLoading } = useAuth();
@@ -20,6 +21,14 @@ const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.Re
   if (!user) return <Navigate to="/login" replace />;
   if (requireAdmin && user.role !== 'admin') return <Navigate to="/" replace />;
   return <>{children}</>;
+};
+
+const RootDashboard = () => {
+  const { user } = useAuth();
+  if (user?.role === 'solicitante') {
+    return <SolicitanteDashboard />;
+  }
+  return <Dashboard />;
 };
 
 export default function App() {
@@ -37,7 +46,7 @@ export default function App() {
                   <Route path="/" element={
                     <ProtectedRoute>
                       <Layout>
-                        <Dashboard />
+                        <RootDashboard />
                       </Layout>
                     </ProtectedRoute>
                   } />

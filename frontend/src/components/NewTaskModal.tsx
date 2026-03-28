@@ -57,10 +57,12 @@ const PRIORITY_OPTIONS = [
 ];
 
 export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTaskModalProps) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { tags, createTag } = useTags();
   const { platforms } = usePlatforms();
   const { brands } = useBrand();
+  
+  const isSolicitante = user?.role === 'solicitante';
   const [title, setTitle]           = useState('');
   const [description, setDescription] = useState('');
   const [deadline, setDeadline]     = useState('');
@@ -171,53 +173,57 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
             {/* Básico */}
             <section>
               <SectionLabel icon={<Tag size={14} />} title="Informações Básicas" />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isSolicitante ? '1fr' : '1fr auto', gap: '0.75rem', marginBottom: '0.75rem' }}>
                 <FormField label="Título *">
                   <input required value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Arte para campanha de verão" className="form-input" />
                 </FormField>
-                <FormField label="Prioridade">
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: 4 }}>
-                    {PRIORITY_OPTIONS.map(p => (
-                      <button key={p.value} type="button" onClick={() => setPriority(p.value)}
-                        style={{
-                          padding: '0.3rem 0.75rem', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
-                          border: `1.5px solid ${priority === p.value ? p.color : 'var(--border)'}`,
-                          background: priority === p.value ? p.color + '20' : 'var(--surface-2)',
-                          color: priority === p.value ? p.color : 'var(--text-2)',
-                          transition: 'all 150ms',
-                        }}
-                      >{p.label}</button>
-                    ))}
-                  </div>
-                </FormField>
+                {!isSolicitante && (
+                  <FormField label="Prioridade">
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: 4 }}>
+                      {PRIORITY_OPTIONS.map(p => (
+                        <button key={p.value} type="button" onClick={() => setPriority(p.value)}
+                          style={{
+                            padding: '0.3rem 0.75rem', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
+                            border: `1.5px solid ${priority === p.value ? p.color : 'var(--border)'}`,
+                            background: priority === p.value ? p.color + '20' : 'var(--surface-2)',
+                            color: priority === p.value ? p.color : 'var(--text-2)',
+                            transition: 'all 150ms',
+                          }}
+                        >{p.label}</button>
+                      ))}
+                    </div>
+                  </FormField>
+                )}
               </div>
 
               <FormField label="Descrição">
                 <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Briefing, copy, detalhes..." className="form-input" style={{ resize: 'vertical' }} />
               </FormField>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
-                <FormField label="Setor">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    <select value={sectorType} onChange={e => setSectorType(e.target.value)} className="form-input">
-                      <option value="Marketing">Marketing</option>
-                      <option value="Outro">Outro...</option>
+              {!isSolicitante && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+                  <FormField label="Setor">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <select value={sectorType} onChange={e => setSectorType(e.target.value)} className="form-input">
+                        <option value="Marketing">Marketing</option>
+                        <option value="Outro">Outro...</option>
+                      </select>
+                      {sectorType === 'Outro' && (
+                        <input value={customSector} onChange={e => setCustomSector(e.target.value)} placeholder="Qual setor?" className="form-input" autoFocus />
+                      )}
+                    </div>
+                  </FormField>
+                  <FormField label="Marca / Cliente">
+                    <select value={brand} onChange={e => setBrand(e.target.value)} className="form-input">
+                      <option value="">Selecione...</option>
+                      {brands.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
                     </select>
-                    {sectorType === 'Outro' && (
-                      <input value={customSector} onChange={e => setCustomSector(e.target.value)} placeholder="Qual setor?" className="form-input" autoFocus />
-                    )}
-                  </div>
-                </FormField>
-                <FormField label="Marca / Cliente">
-                  <select value={brand} onChange={e => setBrand(e.target.value)} className="form-input">
-                    <option value="">Selecione...</option>
-                    {brands.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
-                  </select>
-                </FormField>
-                <FormField label="Prazo de Entrega">
-                  <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} className="form-input" />
-                </FormField>
-              </div>
+                  </FormField>
+                  <FormField label="Prazo de Entrega">
+                    <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} className="form-input" />
+                  </FormField>
+                </div>
+              )}
 
               <div style={{ marginTop: '0.75rem' }}>
                 <FormField label="Link de Referência">
@@ -228,72 +234,74 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                 </FormField>
               </div>
 
-              <div style={{ marginTop: '0.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-2)' }}>Tags</label>
-                  {!isCreatingTag && (
-                    <button type="button" onClick={() => setIsCreatingTag(true)} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Plus size={12} /> Nova Tag
-                    </button>
+              {!isSolicitante && (
+                <div style={{ marginTop: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-2)' }}>Tags</label>
+                    {!isCreatingTag && (
+                      <button type="button" onClick={() => setIsCreatingTag(true)} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Plus size={12} /> Nova Tag
+                      </button>
+                    )}
+                  </div>
+                  
+                  {isCreatingTag && (
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <input
+                        autoFocus
+                        value={newTagName}
+                        onChange={e => setNewTagName(e.target.value)}
+                        onKeyDown={async e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (newTagName.trim()) {
+                              await createTag(newTagName.trim(), '#8b5cf6');
+                              setNewTagName('');
+                              setIsCreatingTag(false);
+                            }
+                          }
+                        }}
+                        placeholder="Nome da tag (Enter para salvar)"
+                        className="form-input"
+                        style={{ flex: 1, padding: '0.3rem 0.75rem', fontSize: '0.75rem' }}
+                      />
+                      <button type="button" onClick={() => setIsCreatingTag(false)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                  
+                  {tags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      {tags.map(tag => {
+                        const selected = selectedTags.includes(tag.id);
+                        return (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() => setSelectedTags(prev =>
+                              selected ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
+                            )}
+                            style={{
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: 20,
+                              fontSize: '0.76rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              border: `1.5px solid ${selected ? tag.color : 'var(--border)'}`,
+                              background: selected ? tag.color + '25' : 'var(--surface-2)',
+                              color: selected ? tag.color : 'var(--text-2)',
+                              transition: 'all 150ms',
+                            }}
+                          >
+                            {tag.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
-                
-                {isCreatingTag && (
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <input
-                      autoFocus
-                      value={newTagName}
-                      onChange={e => setNewTagName(e.target.value)}
-                      onKeyDown={async e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          if (newTagName.trim()) {
-                            await createTag(newTagName.trim(), '#8b5cf6');
-                            setNewTagName('');
-                            setIsCreatingTag(false);
-                          }
-                        }
-                      }}
-                      placeholder="Nome da tag (Enter para salvar)"
-                      className="form-input"
-                      style={{ flex: 1, padding: '0.3rem 0.75rem', fontSize: '0.75rem' }}
-                    />
-                    <button type="button" onClick={() => setIsCreatingTag(false)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}>
-                      <X size={14} />
-                    </button>
-                  </div>
-                )}
-                
-                {tags.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                    {tags.map(tag => {
-                      const selected = selectedTags.includes(tag.id);
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => setSelectedTags(prev =>
-                            selected ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
-                          )}
-                          style={{
-                            padding: '0.25rem 0.75rem',
-                            borderRadius: 20,
-                            fontSize: '0.76rem',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            border: `1.5px solid ${selected ? tag.color : 'var(--border)'}`,
-                            background: selected ? tag.color + '25' : 'var(--surface-2)',
-                            color: selected ? tag.color : 'var(--text-2)',
-                            transition: 'all 150ms',
-                          }}
-                        >
-                          {tag.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              )}
             </section>
 
             {/* Distribuição */}
@@ -363,7 +371,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                 </div>
               </FormField>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isSolicitante ? '1fr' : '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
                 <FormField label="Formatos">
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: 4 }}>
                     {!network && <span style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Selecione a rede primeiro</span>}
@@ -387,67 +395,71 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                     })}
                   </div>
                 </FormField>
-                <FormField label="Posicionamentos">
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: 4 }}>
-                    {PLACEMENTS.map(p => {
-                      const selected = selectedPlacements.includes(p);
-                      return (
-                        <button
-                          key={p} type="button"
-                          onClick={() => setSelectedPlacements(prev => selected ? prev.filter(x => x !== p) : [...prev, p])}
-                          style={{
-                            padding: '0.25rem 0.6rem', borderRadius: 6, fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer',
-                            border: `1.5px solid ${selected ? 'var(--brand-500)' : 'var(--border)'}`,
-                            background: selected ? 'var(--brand-50)' : 'var(--surface-2)',
-                            color: selected ? 'var(--brand-600)' : 'var(--text-2)',
-                            transition: 'all 150ms',
-                          }}
-                        >
-                          {p}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </FormField>
+                {!isSolicitante && (
+                  <FormField label="Posicionamentos">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: 4 }}>
+                      {PLACEMENTS.map(p => {
+                        const selected = selectedPlacements.includes(p);
+                        return (
+                          <button
+                            key={p} type="button"
+                            onClick={() => setSelectedPlacements(prev => selected ? prev.filter(x => x !== p) : [...prev, p])}
+                            style={{
+                              padding: '0.25rem 0.6rem', borderRadius: 6, fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer',
+                              border: `1.5px solid ${selected ? 'var(--brand-500)' : 'var(--border)'}`,
+                              background: selected ? 'var(--brand-50)' : 'var(--surface-2)',
+                              color: selected ? 'var(--brand-600)' : 'var(--text-2)',
+                              transition: 'all 150ms',
+                            }}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </FormField>
+                )}
               </div>
             </section>
 
             {/* Fluxo */}
-            <section>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <SectionLabel icon={<Target size={14} />} title="Fluxo de Trabalho" />
-                <button type="button" onClick={addStep} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px dashed var(--brand-400)', color: 'var(--brand-600)', borderRadius: 6, padding: '0.3rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
-                  <Plus size={14} /> Etapa
-                </button>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {steps.map((step, i) => (
-                  <div key={step.id} style={{ background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)', padding: '0.875rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--brand-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, flexShrink: 0, marginTop: 2 }}>
-                      {i + 1}
-                    </div>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <select required value={step.user_id} onChange={e => changeStep(step.id, 'user_id', e.target.value)} className="form-input" style={{ fontSize: '0.85rem', flex: 1 }}>
-                          <option value="">Responsável...</option>
-                          {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.position})</option>)}
-                        </select>
-                        <input type="number" min={0} value={step.pieces || ''} onChange={e => changeStep(step.id, 'pieces', parseInt(e.target.value) || 0)} placeholder="Peças" className="form-input" style={{ fontSize: '0.85rem', width: 80, textAlign: 'center' }} title="Quantidade de peças" />
+            {!isSolicitante && (
+              <section>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <SectionLabel icon={<Target size={14} />} title="Fluxo de Trabalho" />
+                  <button type="button" onClick={addStep} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px dashed var(--brand-400)', color: 'var(--brand-600)', borderRadius: 6, padding: '0.3rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+                    <Plus size={14} /> Etapa
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {steps.map((step, i) => (
+                    <div key={step.id} style={{ background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)', padding: '0.875rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                      <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--brand-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, flexShrink: 0, marginTop: 2 }}>
+                        {i + 1}
                       </div>
-                      <input type="text" value={step.instruction} onChange={e => changeStep(step.id, 'instruction', e.target.value)} placeholder="Instrução específica (opcional)" className="form-input" style={{ fontSize: '0.8rem' }} />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <select required value={step.user_id} onChange={e => changeStep(step.id, 'user_id', e.target.value)} className="form-input" style={{ fontSize: '0.85rem', flex: 1 }}>
+                            <option value="">Responsável...</option>
+                            {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.position})</option>)}
+                          </select>
+                          <input type="number" min={0} value={step.pieces || ''} onChange={e => changeStep(step.id, 'pieces', parseInt(e.target.value) || 0)} placeholder="Peças" className="form-input" style={{ fontSize: '0.85rem', width: 80, textAlign: 'center' }} title="Quantidade de peças" />
+                        </div>
+                        <input type="text" value={step.instruction} onChange={e => changeStep(step.id, 'instruction', e.target.value)} placeholder="Instrução específica (opcional)" className="form-input" style={{ fontSize: '0.8rem' }} />
+                      </div>
+                      {steps.length > 1 && (
+                        <button type="button" onClick={() => removeStep(step.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 4, borderRadius: 4, display: 'flex', marginTop: 2 }}>
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
-                    {steps.length > 1 && (
-                      <button type="button" onClick={() => removeStep(step.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 4, borderRadius: 4, display: 'flex', marginTop: 2 }}>
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.5rem' }}>
-                A tarefa passará automaticamente para o próximo responsável ao ser concluída.
-              </p>
-            </section>
+                  ))}
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.5rem' }}>
+                  A tarefa passará automaticamente para o próximo responsável ao ser concluída.
+                </p>
+              </section>
+            )}
           </form>
         </div>
 

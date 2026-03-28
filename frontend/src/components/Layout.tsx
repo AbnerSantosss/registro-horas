@@ -171,7 +171,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const { selectedBrand } = useBrand();
   const initial = user?.name?.charAt(0).toUpperCase() ?? '?';
-  const isCerteiro = selectedBrand?.name.toLowerCase().includes('certeiro');
+  
+  const getBrandBackground = (brandName?: string) => {
+    if (!brandName) return 'url(/logos/background-logame.jpeg)';
+    const name = brandName.toLowerCase();
+    
+    if (name.includes('certeiro')) return 'url(/logos/background-certeiro.jpg)';
+    if (name.includes('geralbet') || name.includes('gerabet')) return 'url(/logos/background-gerabet.jpg)';
+    if (name.includes('liderbet')) return 'url(/logos/background-liderbet.jpg)';
+    
+    return 'url(/logos/background-logame.jpeg)';
+  };
 
   return (
     <div className="flex h-screen overflow-hidden relative" style={{ color: 'var(--text-1)' }}>
@@ -181,7 +191,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: isCerteiro ? 'url(/logos/background-certeiro.jpg)' : 'url(/logos/background-logame.jpeg)',
+          backgroundImage: getBrandBackground(selectedBrand?.name),
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
@@ -194,8 +204,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           position: 'absolute',
           inset: 0,
           background: 'var(--bg-overlay, rgba(8, 11, 16, 0.80))',
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
           zIndex: 1,
         }}
       />
@@ -216,7 +226,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Nav */}
         <nav className="flex-1 px-2.5 py-3 space-y-0.5">
-          {NAV_ITEMS_COMMON.map(({ to, label, icon: Icon, end }) => (
+          {[
+            { to: '/', label: user?.role === 'solicitante' ? 'Minhas Solicitações' : 'Dashboard', icon: LayoutDashboard, end: true }
+          ].map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
