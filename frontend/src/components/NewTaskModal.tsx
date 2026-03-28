@@ -58,7 +58,7 @@ const PRIORITY_OPTIONS = [
 
 export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTaskModalProps) {
   const { token } = useAuth();
-  const { tags } = useTags();
+  const { tags, createTag } = useTags();
   const { platforms } = usePlatforms();
   const { brands } = useBrand();
   const [title, setTitle]           = useState('');
@@ -68,7 +68,10 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
   const [network, setNetwork]       = useState('');
   const [placement, setPlacement]   = useState('');
   const [format, setFormat]         = useState('');
-  const [sector, setSector]         = useState('');
+  const [sectorType, setSectorType] = useState('Marketing');
+  const [customSector, setCustomSector] = useState('');
+  const [newTagName, setNewTagName] = useState('');
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
   const [reference, setReference]   = useState('');
   const [priority, setPriority]     = useState('normal');
   const [brand, setBrand]           = useState('');
@@ -80,9 +83,10 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
       fetchUsers();
       setTitle(''); setDescription(''); setDeadline('');
       setNetwork(''); setPlacement(''); setFormat('');
-      setSector(''); setReference(''); setPriority('normal'); setBrand('');
+      setSectorType('Marketing'); setCustomSector(''); setReference(''); setPriority('normal'); setBrand('');
       setSelectedTags([]);
       setSteps([{ id: crypto.randomUUID(), user_id: '', instruction: '', pieces: 0 }]);
+      setIsCreatingTag(false); setNewTagName('');
     }
   }, [isOpen]);
 
@@ -103,10 +107,11 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
     const validSteps = steps.filter(s => s.user_id !== '');
     if (!validSteps.length) { alert('Adicione pelo menos um responsável.'); return; }
     try {
+      const finalSector = sectorType === 'Outro' ? customSector : sectorType;
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title, description, type: 'Arte', deadline: deadline || null, network, placement, format, sector, reference, priority, brand: brand || null, tag_ids: selectedTags, steps: validSteps }),
+        body: JSON.stringify({ title, description, type: 'Arte', deadline: deadline || null, network, placement, format, sector: finalSector, reference, priority, brand: brand || null, tag_ids: selectedTags, steps: validSteps }),
       });
       if (res.ok) { onTaskCreated(); onClose(); }
     } catch {}
@@ -177,7 +182,15 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
                 <FormField label="Setor">
-                  <input value={sector} onChange={e => setSector(e.target.value)} placeholder="Ex: Marketing" className="form-input" />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <select value={sectorType} onChange={e => setSectorType(e.target.value)} className="form-input">
+                      <option value="Marketing">Marketing</option>
+                      <option value="Outro">Outro...</option>
+                    </select>
+                    {sectorType === 'Outro' && (
+                      <input value={customSector} onChange={e => setCustomSector(e.target.value)} placeholder="Qual setor?" className="form-input" autoFocus />
+                    )}
+                  </div>
                 </FormField>
                 <FormField label="Marca / Cliente">
                   <select value={brand} onChange={e => setBrand(e.target.value)} className="form-input">
@@ -199,9 +212,43 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                 </FormField>
               </div>
 
-              {tags.length > 0 && (
-                <div style={{ marginTop: '0.75rem' }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: '0.4rem' }}>Tags</label>
+              <div style={{ marginTop: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-2)' }}>Tags</label>
+                  {!isCreatingTag && (
+                    <button type="button" onClick={() => setIsCreatingTag(true)} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Plus size={12} /> Nova Tag
+                    </button>
+                  )}
+                </div>
+                
+                {isCreatingTag && (
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                      autoFocus
+                      value={newTagName}
+                      onChange={e => setNewTagName(e.target.value)}
+                      onKeyDown={async e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newTagName.trim()) {
+                            await createTag(newTagName.trim(), '#8b5cf6');
+                            setNewTagName('');
+                            setIsCreatingTag(false);
+                          }
+                        }
+                      }}
+                      placeholder="Nome da tag (Enter para salvar)"
+                      className="form-input"
+                      style={{ flex: 1, padding: '0.3rem 0.75rem', fontSize: '0.75rem' }}
+                    />
+                    <button type="button" onClick={() => setIsCreatingTag(false)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 4 }}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+                
+                {tags.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                     {tags.map(tag => {
                       const selected = selectedTags.includes(tag.id);
@@ -229,8 +276,8 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                       );
                     })}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </section>
 
             {/* Distribuição */}
