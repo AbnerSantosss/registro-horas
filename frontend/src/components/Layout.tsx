@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useBrand, BrandOption } from '../context/BrandContext';
+import { useBrand, BrandOption, getBrandAsset } from '../context/BrandContext';
 import { LogOut, LayoutDashboard, Users, Moon, Sun, FileText, ChevronDown, Settings } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -17,8 +17,9 @@ const NAV_ITEMS_ADMIN = [
 
 /** Helper: retorna o logo correto para o tema atual */
 function useBrandLogo(brand: BrandOption | null, type: 'logo' | 'icon' = 'logo') {
+  const { theme } = useTheme();
   if (!brand) return null;
-  return type === 'logo' ? brand.logoUrl : brand.iconUrl;
+  return getBrandAsset(brand, type, theme);
 }
 
 /** Select de marca para admins */
@@ -41,7 +42,7 @@ function BrandSelector() {
     setOpen(false);
   };
 
-  const getIcon = (brand: BrandOption) => brand.iconUrl || '/logos/icon_geralbet_azul.png';
+  const getIcon = (brand: BrandOption) => getBrandAsset(brand, 'icon', theme) || '/logos/icon_geralbet_azul.png';
 
   return (
     <div ref={ref} className="relative px-2.5 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -137,7 +138,11 @@ function SidebarLogo() {
           <img
             src={logoSrc}
             alt={selectedBrand.name}
-            className="h-8 w-auto max-w-[120px] object-contain"
+            className={`w-auto object-contain ${
+              selectedBrand.name.toLowerCase().includes('certeiro')
+                ? 'h-12 max-w-[150px]'
+                : 'h-8 max-w-[120px]'
+            }`}
             onError={e => {
               (e.target as HTMLImageElement).style.display = 'none';
             }}

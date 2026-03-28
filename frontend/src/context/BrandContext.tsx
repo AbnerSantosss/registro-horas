@@ -9,6 +9,29 @@ export interface BrandOption {
   iconUrl: string | null;
 }
 
+export function getBrandAsset(brand: BrandOption | null, type: 'logo' | 'icon', theme: 'light' | 'dark') {
+  if (!brand) return null;
+  const isDark = theme === 'dark';
+  const name = brand.name.toLowerCase();
+
+  if (name.includes('liderbet')) {
+    if (type === 'logo') return isDark ? '/logos/liderbet-branco.png' : '/logos/liderbet-preto.png';
+    return isDark ? '/logos/icon_liderbet_branco.png' : '/logos/icon_liderbet_preto.png';
+  }
+
+  if (name.includes('certeiro')) {
+    if (type === 'logo') return '/logos/Certeiro - Logo.png';
+    return '/logos/icon_certeiro.png';
+  }
+  
+  if (name.includes('geralbet')) {
+    if (type === 'logo') return isDark ? '/logos/geralbet-branca.png' : '/logos/geralbet-azul.png';
+    return isDark ? '/logos/icon_geralbet_branco.png' : '/logos/icon_geralbet_azul.png';
+  }
+
+  return type === 'logo' ? brand.logoUrl : brand.iconUrl;
+}
+
 /* ── Brand color palettes ────────────────────────── */
 const BRAND_PALETTES: Record<string, Record<string, string>> = {
   logame: {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useBrand } from '../context/BrandContext';
+import { useBrand, getBrandAsset } from '../context/BrandContext';
 import { Task } from '../types';
 import {
   PlayCircle, PauseCircle, CheckCircle2, Clock, User as UserIcon,
@@ -32,6 +32,7 @@ const PRIORITY_STYLE: Record<string, { bg: string; color: string }> = {
 /* ─── Brand filter pills ──────────────────────────────────── */
 function BrandFilterPills() {
   const { brands, selectedBrand, setSelectedBrand } = useBrand();
+  const { theme } = useTheme();
 
   const pillBase: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -70,7 +71,7 @@ function BrandFilterPills() {
             }}
           >
             <img
-              src={b.iconUrl || '/logos/icon_geralbet_azul.png'}
+              src={getBrandAsset(b, 'icon', theme) || '/logos/icon_geralbet_azul.png'}
               alt={b.name}
               style={{
                 height: 18,
