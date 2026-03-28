@@ -66,8 +66,8 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
   const [deadline, setDeadline]     = useState('');
   const [users, setUsers]           = useState<any[]>([]);
   const [network, setNetwork]       = useState('');
-  const [placement, setPlacement]   = useState('');
-  const [format, setFormat]         = useState('');
+  const [selectedPlacements, setSelectedPlacements] = useState<string[]>([]);
+  const [selectedFormats, setSelectedFormats]       = useState<string[]>([]);
   const [sectorType, setSectorType] = useState('Marketing');
   const [customSector, setCustomSector] = useState('');
   const [newTagName, setNewTagName] = useState('');
@@ -82,7 +82,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
     if (isOpen) {
       fetchUsers();
       setTitle(''); setDescription(''); setDeadline('');
-      setNetwork(''); setPlacement(''); setFormat('');
+      setNetwork(''); setSelectedPlacements([]); setSelectedFormats([]);
       setSectorType('Marketing'); setCustomSector(''); setReference(''); setPriority('normal'); setBrand('');
       setSelectedTags([]);
       setSteps([{ id: crypto.randomUUID(), user_id: '', instruction: '', pieces: 0 }]);
@@ -108,12 +108,28 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
     if (!validSteps.length) { alert('Adicione pelo menos um responsável.'); return; }
     try {
       const finalSector = sectorType === 'Outro' ? customSector : sectorType;
-      const res = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title, description, type: 'Arte', deadline: deadline || null, network, placement, format, sector: finalSector, reference, priority, brand: brand || null, tag_ids: selectedTags, steps: validSteps }),
-      });
-      if (res.ok) { onTaskCreated(); onClose(); }
+      
+      const placementsToCreate = selectedPlacements.length > 0 ? selectedPlacements : [''];
+      const formatsToCreate = selectedFormats.length > 0 ? selectedFormats : [''];
+
+      for (const p of placementsToCreate) {
+        for (const f of formatsToCreate) {
+          const suffix = (selectedPlacements.length > 1 || selectedFormats.length > 1) ? ` - ${[f, p].filter(Boolean).join(' ')}` : '';
+          
+          await fetch('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ 
+              title: `${title.trim()}${suffix}`, 
+              description, type: 'Arte', deadline: deadline || null, 
+              network, placement: p, format: f, sector: finalSector, reference, 
+              priority, brand: brand || null, tag_ids: selectedTags, steps: validSteps 
+            }),
+          });
+        }
+      }
+      onTaskCreated(); 
+      onClose();
     } catch {}
   };
 
@@ -296,7 +312,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                         <button
                           key={p.id}
                           type="button"
-                          onClick={() => { setNetwork(isSelected ? '' : p.name); setFormat(''); }}
+                          onClick={() => { setNetwork(isSelected ? '' : p.name); setSelectedFormats([]); }}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 6,
                             padding: '0.4rem 0.85rem', borderRadius: 10,
@@ -326,7 +342,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                         <button
                           key={n}
                           type="button"
-                          onClick={() => { setNetwork(isSelected ? '' : n); setFormat(''); }}
+                          onClick={() => { setNetwork(isSelected ? '' : n); setSelectedFormats([]); }}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 6,
                             padding: '0.4rem 0.85rem', borderRadius: 10,
@@ -348,17 +364,50 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
               </FormField>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
-                <FormField label="Formato">
-                  <select value={format} onChange={e => setFormat(e.target.value)} disabled={!network} className="form-input">
-                    <option value="">{network ? 'Selecione...' : 'Selecione a rede'}</option>
-                    {availableFormats.map(f => <option key={f} value={f}>{f}</option>)}
-                  </select>
+                <FormField label="Formatos">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: 4 }}>
+                    {!network && <span style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Selecione a rede primeiro</span>}
+                    {availableFormats.map(f => {
+                      const selected = selectedFormats.includes(f);
+                      return (
+                        <button
+                          key={f} type="button"
+                          onClick={() => setSelectedFormats(prev => selected ? prev.filter(x => x !== f) : [...prev, f])}
+                          style={{
+                            padding: '0.25rem 0.6rem', borderRadius: 6, fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer',
+                            border: `1.5px solid ${selected ? 'var(--brand-500)' : 'var(--border)'}`,
+                            background: selected ? 'var(--brand-50)' : 'var(--surface-2)',
+                            color: selected ? 'var(--brand-600)' : 'var(--text-2)',
+                            transition: 'all 150ms',
+                          }}
+                        >
+                          {f}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </FormField>
-                <FormField label="Posicionamento">
-                  <select value={placement} onChange={e => setPlacement(e.target.value)} className="form-input">
-                    <option value="">Selecione...</option>
-                    {PLACEMENTS.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
+                <FormField label="Posicionamentos">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: 4 }}>
+                    {PLACEMENTS.map(p => {
+                      const selected = selectedPlacements.includes(p);
+                      return (
+                        <button
+                          key={p} type="button"
+                          onClick={() => setSelectedPlacements(prev => selected ? prev.filter(x => x !== p) : [...prev, p])}
+                          style={{
+                            padding: '0.25rem 0.6rem', borderRadius: 6, fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer',
+                            border: `1.5px solid ${selected ? 'var(--brand-500)' : 'var(--border)'}`,
+                            background: selected ? 'var(--brand-50)' : 'var(--surface-2)',
+                            color: selected ? 'var(--brand-600)' : 'var(--text-2)',
+                            transition: 'all 150ms',
+                          }}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </FormField>
               </div>
             </section>
