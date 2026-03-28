@@ -84,18 +84,33 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Upload endpoint for Brand Images (Logo or Icon)
-router.post('/upload-image', upload.single('image'), (req, res) => {
+// Upload endpoint for Brand Logo
+router.post('/upload-logo', upload.single('logo'), (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'Nenhuma imagem enviada.' });
+      return res.status(400).json({ error: 'Nenhum logo enviado.' });
     }
     const base64Image = req.file.buffer.toString('base64');
     const url = `data:${req.file.mimetype};base64,${base64Image}`;
     res.json({ url });
   } catch (error) {
-    console.error('Error uploading brand image:', error);
-    res.status(500).json({ error: 'Erro no upload.' });
+    console.error('Error uploading brand logo:', error);
+    res.status(500).json({ error: 'Erro no upload do logo.' });
+  }
+});
+
+// Upload endpoint for Brand Icon
+router.post('/upload-icon', upload.single('icon'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum ícone enviado.' });
+    }
+    const base64Image = req.file.buffer.toString('base64');
+    const url = `data:${req.file.mimetype};base64,${base64Image}`;
+    res.json({ url });
+  } catch (error) {
+    console.error('Error uploading brand icon:', error);
+    res.status(500).json({ error: 'Erro no upload do ícone.' });
   }
 });
 
