@@ -6,7 +6,7 @@ import { useBrand, getBrandAsset } from '../context/BrandContext';
 import { Task } from '../types';
 import {
   PlayCircle, PauseCircle, CheckCircle2, Clock, User as UserIcon,
-  Plus, Eye, Check, AlertTriangle, Link as LinkIcon
+  Plus, Eye, Check, AlertTriangle, Link as LinkIcon, Briefcase
 } from 'lucide-react';
 import NewTaskModal from '../components/NewTaskModal';
 import TaskDetailsModal from '../components/TaskDetailsModal';
@@ -18,6 +18,7 @@ const COLUMNS = [
   { id: 'todo',        title: 'A Fazer',       dot: 'hsl(220 13% 50%)' },
   { id: 'in_progress', title: 'Em Andamento',  dot: 'var(--brand-500)' },
   { id: 'paused',      title: 'Pausado',       dot: 'hsl(38 92% 50%)' },
+  { id: 'in_review',   title: 'Revisão Final', dot: 'hsl(280 70% 50%)' },
   { id: 'done',        title: 'Concluído',     dot: 'hsl(142 71% 45%)' },
 ];
 
@@ -126,6 +127,11 @@ export default function Dashboard() {
   // Pause modal state
   const [pausingTaskId, setPausingTaskId]   = useState<string | null>(null);
   const [pauseReason, setPauseReason]       = useState('');
+  const [pauseReasonType, setPauseReasonType] = useState('Outros');
+
+  // Reject modal state
+  const [rejectingTaskId, setRejectingTaskId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   // Filter & bulk selection state
   const [filters, setFilters] = useState<Filters>({
@@ -213,7 +219,7 @@ export default function Dashboard() {
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
     const newStatus = destination.droppableId;
-    if (newStatus === 'done') { setTaskToComplete(draggableId); setMaterialLink(''); setComments(''); setPieces(''); return; }
+    if (newStatus === 'done' || newStatus === 'in_review') { setTaskToComplete(draggableId); setMaterialLink(''); setComments(''); setPieces(''); return; }
     setTasks(prev => {
       const arr = [...prev];
       const idx = arr.findIndex(t => t.id === draggableId);
@@ -239,16 +245,17 @@ export default function Dashboard() {
 
   const openPauseModal = (taskId: string) => {
     setPausingTaskId(taskId);
+    setPauseReasonType('Outros');
     setPauseReason('');
   };
 
   const confirmPause = async () => {
     if (!pausingTaskId) return;
-    const reason = pauseReason.trim() || 'Pausa manual';
+    const finalReason = pauseReasonType === 'Outros' ? (pauseReason.trim() || 'Pausa manual') : pauseReasonType;
     const res = await fetch(`/api/tasks/${pausingTaskId}/time/pause`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason: finalReason }),
     });
     if (res.ok) fetchTasks();
     setPausingTaskId(null);
@@ -260,20 +267,40 @@ export default function Dashboard() {
     const res = await fetch(`/api/tasks/${taskToComplete}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status: 'done', material_link: materialLink, comments, pieces: pieces !== '' ? Number(pieces) : undefined }),
+      body: JSON.stringify({ status: 'in_review', material_link: materialLink, comments, pieces: pieces !== '' ? Number(pieces) : undefined }),
     });
     if (res.ok) fetchTasks();
     setTaskToComplete(null);
     setPieces('');
   };
 
+  const handleReview = async (taskId: string, approved: boolean, reason?: string) => {
+    const res = await fetch(`/api/tasks/${taskId}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ approved, reason }),
+    });
+    if (res.ok) fetchTasks();
+    if (!approved) {
+      setRejectingTaskId(null);
+      setRejectReason('');
+    }
+  };
+
   const getColumn = (task: Task) => {
     if (task.status === 'done') return 'done';
+    if (task.status === 'in_review') return 'in_review';
     const hasMyStep = task.steps?.some(s => s.user_id === user?.id && s.status === 'done');
     return hasMyStep ? 'done' : task.status;
   };
 
-  const visibleTasks = selectedBrand ? tasks.filter(t => (t as any).brand === selectedBrand.name) : tasks;
+  let visibleTasks = tasks;
+  if (user?.role === 'solicitante') {
+    visibleTasks = visibleTasks.filter(t => t.creator_id === user.id);
+  }
+  if (selectedBrand) {
+    visibleTasks = visibleTasks.filter(t => (t as any).brand === selectedBrand.name);
+  }
 
   if (loading) return (
     <div className="flex h-full items-center justify-center" style={{ color: 'var(--text-3)' }}>
@@ -367,6 +394,9 @@ export default function Dashboard() {
                         const isMyStepDone = col.id === 'done' && task.status !== 'done' && task.assignee_id !== user?.id;
                         const pStyle     = PRIORITY_STYLE[task.priority ?? 'normal'] ?? PRIORITY_STYLE.normal;
 
+                        const myTimeObj  = task.user_times?.find(ut => ut.user_name === user?.name);
+                        const myTimeBase = myTimeObj ? myTimeObj.seconds : 0;
+
                         return (
                           <Draggable key={task.id} draggableId={task.id} index={index}>
                             {(prov, snap) => (
@@ -416,9 +446,13 @@ export default function Dashboard() {
                                     {task.type}
                                   </span>
                                   {(task as any).brand && (
-                                    <span className="badge" style={{ background: 'var(--surface-3)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
-                                      {(task as any).brand}
-                                    </span>
+                                    <div 
+                                      className="flex items-center justify-center w-5 h-5 rounded" 
+                                      style={{ background: 'var(--surface-3)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+                                      title={(task as any).brand}
+                                    >
+                                      <Briefcase size={10} />
+                                    </div>
                                   )}
                                   {isMyStepDone && (
                                     <span className="badge" style={{ background: 'rgb(34 197 94 / 0.15)', color: '#4ade80' }}>
@@ -469,13 +503,6 @@ export default function Dashboard() {
                                 >
                                   {task.title}
                                 </h4>
-
-                                {/* Description */}
-                                {!isMyStepDone && (
-                                  <p className="text-xs line-clamp-2 mb-3" style={{ color: 'var(--text-3)' }}>
-                                    {task.description}
-                                  </p>
-                                )}
 
                                 {/* My step instruction */}
                                 {!isMyStepDone && isMyTurn && task.status !== 'done' && currentStep?.instruction && (
@@ -548,7 +575,7 @@ export default function Dashboard() {
                                   className="pt-3 mt-1 space-y-2"
                                   style={{ borderTop: '1px solid var(--border)' }}
                                 >
-                                  {task.status !== 'done' && !isMyStepDone ? (
+                                  {task.status !== 'done' && task.status !== 'in_review' && !isMyStepDone ? (
                                     <>
                                       {/* ── Cronômetro com background destacado ── */}
                                       <div
@@ -566,13 +593,13 @@ export default function Dashboard() {
                                           {task.status === 'in_progress' && task.active_start_time ? (
                                             <>
                                               <Clock size={14} className="animate-pulse" style={{ color: 'hsl(38 92% 50%)' }} />
-                                              <LiveTimer startTime={task.active_start_time} offsetSeconds={task.accumulated_seconds || 0} />
+                                              <LiveTimer startTime={task.active_start_time} offsetSeconds={myTimeBase} />
                                             </>
                                           ) : (
                                             <>
                                               <Clock size={14} style={{ color: 'var(--text-3)' }} />
                                               <span className="font-mono text-sm font-semibold tabular-nums" style={{ color: 'var(--text-2)' }}>
-                                                {formatTime(task.accumulated_seconds || 0)}
+                                                {formatTime(myTimeBase)}
                                               </span>
                                             </>
                                           )}
@@ -640,6 +667,21 @@ export default function Dashboard() {
                                         </button>
                                       </div>
                                     </>
+                                  ) : task.status === 'in_review' ? (
+                                    /* ── Estado de Revisão ── */
+                                    <div className="flex flex-col gap-2 pt-2 mt-2" style={{ borderTop: '1px solid var(--border)' }}>
+                                      <p className="text-xs text-center font-medium" style={{ color: 'var(--brand-600)' }}>Aguardando Revisão Final</p>
+                                      {(user?.role === 'admin' || user?.role === 'coordenador') && (
+                                        <div className="flex gap-2">
+                                          <button onClick={() => handleReview(task.id, true)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded bg-green-500/10 text-green-600 border border-green-500/20 hover:bg-green-500/20 text-xs font-bold transition-colors">
+                                            <CheckCircle2 size={14} /> Aprovar
+                                          </button>
+                                          <button onClick={() => setRejectingTaskId(task.id)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20 text-xs font-bold transition-colors">
+                                            <AlertTriangle size={14} /> Reprovar
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
                                   ) : (
                                     /* ── Estado concluído ── */
                                     <div
@@ -690,21 +732,59 @@ export default function Dashboard() {
           >
             <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--text-1)' }}>Pausar Timer</h2>
             <p className="text-sm mb-4" style={{ color: 'var(--text-3)' }}>
-              Informe o motivo da pausa (opcional).
+              Informe o motivo da pausa.
             </p>
-            <input
-              type="text"
-              className="input-base w-full mb-4"
-              placeholder="Ex: reunião, almoço, aguardando retorno…"
-              value={pauseReason}
-              onChange={e => setPauseReason(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') confirmPause(); if (e.key === 'Escape') setPausingTaskId(null); }}
-              autoFocus
-            />
+            <select
+              className="input-base w-full mb-3"
+              value={pauseReasonType}
+              onChange={e => { setPauseReasonType(e.target.value); if (e.target.value !== 'Outro') setPauseReason(''); }}
+            >
+              <option value="Intervalo">Intervalo</option>
+              <option value="Banheiro">Banheiro</option>
+              <option value="Urgente">Urgente</option>
+              <option value="Outro">Outro</option>
+            </select>
+            {pauseReasonType === 'Outro' && (
+              <input
+                type="text"
+                className="input-base w-full mb-4"
+                placeholder="Ex: reunião, almoço, aguardando retorno…"
+                value={pauseReason}
+                onChange={e => setPauseReason(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') confirmPause(); if (e.key === 'Escape') setPausingTaskId(null); }}
+                autoFocus
+              />
+            )}
             <div className="flex gap-3 justify-end">
               <button onClick={() => setPausingTaskId(null)} className="btn-ghost">Cancelar</button>
               <button onClick={confirmPause} className="btn-brand flex items-center gap-2">
                 <PauseCircle size={16} /> Pausar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject modal */}
+      {rejectingTaskId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)' }}>
+            <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--text-1)' }}>Reprovar Tarefa</h2>
+            <p className="text-sm mb-4" style={{ color: 'var(--text-3)' }}>
+              Informe o motivo da reprovação (obrigatório). A tarefa será devolvida para a última pessoa responsável.
+            </p>
+            <textarea
+              className="input-base w-full mb-4 resize-none"
+              rows={4}
+              placeholder="Descreva o que precisa ser ajustado..."
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              autoFocus
+            />
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => { setRejectingTaskId(null); setRejectReason(''); }} className="btn-ghost">Cancelar</button>
+              <button onClick={() => { if (rejectReason.trim()) handleReview(rejectingTaskId, false, rejectReason); else alert('Informe o motivo!'); }} className="btn-brand flex items-center gap-2" style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }}>
+                <AlertTriangle size={16} /> Reprovar
               </button>
             </div>
           </div>

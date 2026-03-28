@@ -8,6 +8,7 @@ import { Task } from '../types';
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
   done:        { label: 'Concluído',    bg: 'hsl(142 71% 45% / 0.15)',  color: '#4ade80' },
   in_progress: { label: 'Em andamento', bg: 'var(--brand-100)',          color: 'var(--brand-700)' },
+  in_review:   { label: 'Em Revisão',   bg: 'hsl(280 80% 60% / 0.15)',  color: 'hsl(280 80% 60%)' },
   paused:      { label: 'Pausado',      bg: 'hsl(38 92% 50% / 0.15)',   color: 'hsl(38 92% 50%)' },
   todo:        { label: 'A Fazer',      bg: 'var(--surface-3)',          color: 'var(--text-3)' },
 };
@@ -32,10 +33,12 @@ interface TaskStats {
   total: number;
   todo: number;
   in_progress: number;
+  in_review: number;
   paused: number;
   done: number;
   overdue: number;
   total_pieces: number;
+  total_rejections: number;
 }
 
 /* ───── StatsCard ───── */
@@ -88,6 +91,9 @@ export default function Reports() {
   const [loading, setLoading]     = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTab, setActiveTab] = useState<'geral' | 'colaborador'>('geral');
+  const [filterBrand, setFilterBrand] = useState('Todas');
+
+  const BRANDS = ['Todas', 'Logame', 'Officom', 'Habeas', 'Sintonia', 'Poder das Teclas', 'Escola das Teclas', 'Venda Mais', 'Venda Mais B2B', 'Gospel', 'Iniciação', 'Outros'];
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -128,10 +134,12 @@ export default function Reports() {
     { icon: ClipboardList,  label: 'Total de Tarefas',  value: stats.total,       accent: '#818cf8' },
     { icon: ListTodo,       label: 'A Fazer',           value: stats.todo,        accent: '#94a3b8' },
     { icon: Clock,          label: 'Em Produção',     value: stats.in_progress, accent: '#60a5fa' },
+    { icon: Eye,            label: 'Em Revisão',      value: stats.in_review,   accent: '#c084fc' },
     { icon: PauseCircle,    label: 'Pausadas',          value: stats.paused,      accent: '#fbbf24' },
     { icon: CheckCircle2,   label: 'Concluídas',        value: stats.done,        accent: '#4ade80' },
     { icon: AlertTriangle,  label: 'Atrasadas',         value: stats.overdue,     accent: '#f87171' },
-    { icon: Layers,         label: 'Peças Produzidas',  value: stats.total_pieces, accent: '#c084fc' },
+    { icon: Layers,         label: 'Peças Produzidas',  value: stats.total_pieces, accent: '#34d399' },
+    { icon: AlertTriangle,  label: 'Devoluções',       value: stats.total_rejections || 0, accent: '#ef4444' },
   ] : [];
 
   return (
@@ -175,7 +183,7 @@ export default function Reports() {
         <div className="flex flex-col gap-6">
           {/* ── Stats cards ─── */}
           {stats && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+            <div className="flex flex-wrap gap-4 [&>*]:flex-1 [&>*]:min-w-[140px]">
               {STAT_CARDS.map(card => (
                 <StatsCard key={card.label} {...card} />
               ))}
@@ -193,6 +201,16 @@ export default function Reports() {
                 <Clock size={16} style={{ color: 'var(--brand-500)' }} />
                 Tempo por Colaborador
               </h2>
+              <select
+                value={filterBrand}
+                onChange={e => setFilterBrand(e.target.value)}
+                className="input"
+                style={{ width: 140, padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+              >
+                {BRANDS.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
             </div>
 
         <div
@@ -216,7 +234,7 @@ export default function Reports() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-                    {['Colaborador', 'Tarefa', 'Status', 'Tempo Total', 'Peças', 'Pausas', ''].map(h => (
+                    {['Colaborador', 'Tarefa', 'Marca', 'Status', 'Tempo', 'Peças', 'Pausas', 'Devoluções', ''].map(h => (
                       <th
                         key={h}
                         className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide ${h === '' ? 'text-right' : ''}`}
@@ -228,14 +246,18 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reports.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-16 text-center text-sm" style={{ color: 'var(--text-3)' }}>
-                        Nenhum registro de tempo encontrado.
-                      </td>
-                    </tr>
-                  ) : (
-                    reports.map((r, i) => {
+                  {(() => {
+                    const filtered = filterBrand === 'Todas' ? reports : reports.filter(r => r.task_brand === filterBrand);
+                    if (filtered.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={9} className="py-16 text-center text-sm" style={{ color: 'var(--text-3)' }}>
+                            Nenhum registro encontrado para esta seleção.
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return filtered.map((r, i) => {
                       const s = STATUS_MAP[r.task_status] ?? STATUS_MAP.todo;
                       return (
                         <tr
@@ -261,8 +283,13 @@ export default function Reports() {
                           </td>
 
                           {/* Task */}
-                          <td className="px-4 py-3 text-sm max-w-xs truncate" style={{ color: 'var(--text-2)' }}>
+                          <td className="px-4 py-3 text-sm max-w-xs truncate" style={{ color: 'var(--text-2)' }} title={r.task_title}>
                             {r.task_title}
+                          </td>
+
+                          {/* Brand */}
+                          <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-2)' }}>
+                            {r.task_brand || '—'}
                           </td>
 
                           {/* Status */}
@@ -290,6 +317,11 @@ export default function Reports() {
                             {r.pause_count} {r.pause_count === 1 ? 'pausa' : 'pausas'}
                           </td>
 
+                          {/* Devolucoes */}
+                          <td className="px-4 py-3 font-mono text-sm font-semibold" style={{ color: r.reject_count > 0 ? '#ef4444' : 'var(--text-3)' }}>
+                            {r.reject_count > 0 ? r.reject_count : '—'}
+                          </td>
+
                           {/* Action */}
                           <td className="px-4 py-3 text-right">
                             <button
@@ -311,8 +343,8 @@ export default function Reports() {
                           </td>
                         </tr>
                       );
-                    })
-                  )}
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>

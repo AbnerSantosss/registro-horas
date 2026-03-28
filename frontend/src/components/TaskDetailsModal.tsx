@@ -325,10 +325,19 @@ export default function TaskDetailsModal({ isOpen, onClose, task, onComplete, us
             <div>
               <SectionLabel icon={<Clock size={13}/>} title="Tempo Gasto" />
             <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-2)' }}>Total:</span>
                 <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--brand-600)', fontVariantNumeric: 'tabular-nums' }}>{fmtDuration(timeData?.total_seconds || 0)}</span>
               </div>
+              {task.user_times && task.user_times.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                  {task.user_times.map((ut, idx) => (
+                    <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '0.2rem 0.5rem', borderRadius: 6, background: 'var(--brand-50)', color: 'var(--brand-700)', fontSize: '0.72rem', fontWeight: 600, border: '1px solid var(--brand-200)' }}>
+                      <UserIcon size={10} /> {ut.user_name}: {fmtDuration(ut.seconds)}
+                    </div>
+                  ))}
+                </div>
+              )}
               {timeData && timeData.entries.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
                   {timeData.entries.map((e: any) => (

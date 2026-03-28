@@ -3,10 +3,15 @@ import { useAuth } from '../context/AuthContext';
 import { useBrand } from '../context/BrandContext';
 import { useTags } from '../context/TagContext';
 import { usePlatforms } from '../context/PlatformContext';
-import { X, Plus, Trash2, Layers, Target, Tag, Link2, Globe } from 'lucide-react';
+import { X, Plus, Trash2, Layers, Target, Tag, Link2, Globe, UploadCloud, File as FileIcon } from 'lucide-react';
 import { SiInstagram, SiYoutube, SiTiktok, SiFacebook, SiPinterest } from 'react-icons/si';
 import { FaXTwitter, FaLinkedin } from 'react-icons/fa6';
 import type { IconType } from 'react-icons';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import { ptBR } from 'date-fns/locale/pt-BR';
+
+registerLocale('pt-BR', ptBR);
 
 interface NewTaskModalProps {
   isOpen: boolean;
@@ -65,7 +70,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
   const isSolicitante = user?.role === 'solicitante';
   const [title, setTitle]           = useState('');
   const [description, setDescription] = useState('');
-  const [deadline, setDeadline]     = useState('');
+  const [deadline, setDeadline]     = useState<Date | null>(null);
   const [users, setUsers]           = useState<any[]>([]);
   const [network, setNetwork]       = useState('');
   const [selectedPlacements, setSelectedPlacements] = useState<string[]>([]);
@@ -77,18 +82,42 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
   const [reference, setReference]   = useState('');
   const [priority, setPriority]     = useState('normal');
   const [brand, setBrand]           = useState('');
+  const [customBrand, setCustomBrand] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagColor, setTagColor]     = useState('#8b5cf6');
   const [steps, setSteps]           = useState<{ id: string; user_id: string; instruction: string; pieces: number }[]>([]);
+  const [materialType, setMaterialType] = useState('');
+  const [subMaterial, setSubMaterial] = useState('');
+  const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
+  const [shouldLoadDraft, setShouldLoadDraft] = useState(true);
 
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
-      setTitle(''); setDescription(''); setDeadline('');
+      setTitle(''); setDescription(''); setDeadline(null);
       setNetwork(''); setSelectedPlacements([]); setSelectedFormats([]);
       setSectorType('Marketing'); setCustomSector(''); setReference(''); setPriority('normal'); setBrand('');
-      setSelectedTags([]);
+      setCustomBrand(''); setMaterialType(''); setSubMaterial(''); setReferenceFiles([]);
+      setSelectedTags([]); setTagColor('#8b5cf6');
       setSteps([{ id: crypto.randomUUID(), user_id: '', instruction: '', pieces: 0 }]);
       setIsCreatingTag(false); setNewTagName('');
+
+      const draft = localStorage.getItem('draft_new_task');
+      if (draft && shouldLoadDraft) {
+        try {
+          const p = JSON.parse(draft);
+          if (p.title) setTitle(p.title);
+          if (p.description) setDescription(p.description);
+          if (p.deadline) setDeadline(new Date(p.deadline));
+          if (p.materialType) setMaterialType(p.materialType);
+          if (p.subMaterial) setSubMaterial(p.subMaterial);
+          if (p.network) setNetwork(p.network);
+          if (p.brand) setBrand(p.brand);
+          if (p.customBrand) setCustomBrand(p.customBrand);
+          if (p.reference) setReference(p.reference);
+        } catch(e){}
+      }
+      setShouldLoadDraft(false);
     }
   }, [isOpen]);
 
@@ -99,17 +128,51 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
     } catch {}
   };
 
+  useEffect(() => {
+    if (!shouldLoadDraft && title) {
+      const draft = { title, description, deadline, materialType, subMaterial, network, brand, customBrand, reference };
+      localStorage.setItem('draft_new_task', JSON.stringify(draft));
+    }
+  }, [title, description, deadline, materialType, subMaterial, network, brand, customBrand, reference, shouldLoadDraft]);
+
   const addStep    = () => setSteps(s => [...s, { id: crypto.randomUUID(), user_id: '', instruction: '', pieces: 0 }]);
   const removeStep = (id: string) => setSteps(s => s.length > 1 ? s.filter(x => x.id !== id) : s);
   const changeStep = (id: string, field: 'user_id' | 'instruction' | 'pieces', value: string | number) =>
     setSteps(s => s.map(x => x.id === id ? { ...x, [field]: value } : x));
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setReferenceFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setReferenceFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!materialType) { alert('Selecione o tipo de material.'); return; }
+    if (materialType === 'Tráfego Pago' && !subMaterial) { alert('Selecione a rede de tráfego pago.'); return; }
+
     const validSteps = steps.filter(s => s.user_id !== '');
     if (!validSteps.length) { alert('Adicione pelo menos um responsável.'); return; }
     try {
+      let uploadedUrls: string[] = [];
+      if (referenceFiles.length > 0) {
+        uploadedUrls = await Promise.all(referenceFiles.map(file => {
+          return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+          });
+        }));
+      }
+
       const finalSector = sectorType === 'Outro' ? customSector : sectorType;
+      const finalBrand = brand === 'Outros' ? customBrand : brand;
+      const finalMaterial = materialType === 'Tráfego Pago' ? `Tráfego Pago - ${subMaterial}` : materialType;
       
       const placementsToCreate = selectedPlacements.length > 0 ? selectedPlacements : [''];
       const formatsToCreate = selectedFormats.length > 0 ? selectedFormats : [''];
@@ -123,20 +186,23 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ 
               title: `${title.trim()}${suffix}`, 
-              description, type: 'Arte', deadline: deadline || null, 
-              network, placement: p, format: f, sector: finalSector, reference, 
-              priority, brand: brand || null, tag_ids: selectedTags, steps: validSteps 
+              description, type: 'Arte', deadline: deadline ? deadline.toISOString() : null, 
+              network, placement: p, format: f, sector: finalSector, reference,
+              referenceFiles: uploadedUrls.length ? uploadedUrls : undefined,
+              materialType: finalMaterial,
+              priority, brand: finalBrand || null, tag_ids: selectedTags, steps: validSteps 
             }),
           });
         }
       }
+      localStorage.removeItem('draft_new_task');
       onTaskCreated(); 
       onClose();
     } catch {}
   };
 
   if (!isOpen) return null;
-  const availableFormats = FORMATS_BY_NETWORK[network] || [];
+  const availableFormats = ['Vídeo', 'Imagem', 'Ambos'];
 
   return (
     <div
@@ -169,6 +235,33 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <form id="task-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+            {/* Tipo de Material */}
+            <section style={{ padding: '1rem', background: 'var(--brand-50)', border: '1px solid var(--brand-200)', borderRadius: 12 }}>
+              <SectionLabel icon={<Layers size={14} color="var(--brand-600)" />} title="Tipo de Material (Obrigatório)" />
+              <div style={{ display: 'grid', gridTemplateColumns: materialType === 'Tráfego Pago' ? '1fr 1fr' : '1fr', gap: '1rem', marginTop: 12 }}>
+                <FormField label="Categoria">
+                  <select value={materialType} onChange={e => { setMaterialType(e.target.value); setSubMaterial(''); }} className="form-input" style={{ borderColor: 'var(--brand-300)' }} required>
+                    <option value="">Selecione...</option>
+                    <option value="Orgânico">Orgânico</option>
+                    <option value="CRM">CRM</option>
+                    <option value="Tráfego Pago">Tráfego Pago</option>
+                  </select>
+                </FormField>
+                {materialType === 'Tráfego Pago' && (
+                  <FormField label="Rede de Divulgação">
+                    <select value={subMaterial} onChange={e => setSubMaterial(e.target.value)} className="form-input" style={{ borderColor: 'var(--brand-300)' }} required>
+                      <option value="">Selecione...</option>
+                      <option value="Meta">Meta</option>
+                      <option value="Google">Google</option>
+                      <option value="Taboola">Taboola</option>
+                      <option value="Kwai">Kwai</option>
+                      <option value="X">X (Twitter)</option>
+                    </select>
+                  </FormField>
+                )}
+              </div>
+            </section>
 
             {/* Básico */}
             <section>
@@ -214,24 +307,56 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                     </div>
                   </FormField>
                   <FormField label="Marca / Cliente">
-                    <select value={brand} onChange={e => setBrand(e.target.value)} className="form-input">
-                      <option value="">Selecione...</option>
-                      {brands.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
-                    </select>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <select value={brand} onChange={e => setBrand(e.target.value)} className="form-input">
+                        <option value="">Selecione...</option>
+                        <option value="Logame">Logame</option>
+                        <option value="Officom">Officom</option>
+                        {brands.filter(b => b.name !== 'Logame' && b.name !== 'Officom').map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                        <option value="Outros">Outros...</option>
+                      </select>
+                      {brand === 'Outros' && (
+                        <input value={customBrand} onChange={e => setCustomBrand(e.target.value)} placeholder="Especifique a marca" className="form-input" autoFocus />
+                      )}
+                    </div>
                   </FormField>
                   <FormField label="Prazo de Entrega">
-                    <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} className="form-input" />
+                    <div style={{ position: 'relative', width: '100%' }}>
+                      <DatePicker
+                        selected={deadline}
+                        onChange={(date: Date | null) => setDeadline(date)}
+                        locale="pt-BR"
+                        dateFormat="dd/MM/yyyy"
+                        placeholderText="Selecione uma data"
+                        className="form-input"
+                        wrapperClassName="w-full"
+                      />
+                    </div>
                   </FormField>
                 </div>
               )}
 
-              <div style={{ marginTop: '0.75rem' }}>
-                <FormField label="Link de Referência">
-                  <div style={{ position: 'relative' }}>
-                    <Link2 size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
-                    <input type="url" value={reference} onChange={e => setReference(e.target.value)} placeholder="https://..." className="form-input" style={{ paddingLeft: 30 }} />
-                  </div>
+              <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <FormField label="Referências e Materiais de Apoio">
+                  <textarea value={reference} onChange={e => setReference(e.target.value)} rows={2} placeholder="Links, ideias, referências..." className="form-input" style={{ resize: 'vertical' }} />
                 </FormField>
+                <div>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.4rem 0.8rem', background: 'var(--surface-2)', border: '1px dashed var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: '0.78rem', color: 'var(--text-2)' }}>
+                    <UploadCloud size={14} /> Anexar Arquivos
+                    <input type="file" multiple onChange={handleFileChange} style={{ display: 'none' }} />
+                  </label>
+                  {referenceFiles.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                      {referenceFiles.map((file, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: 'var(--surface-2)', borderRadius: 4, fontSize: '0.7rem' }}>
+                          <FileIcon size={12} color="var(--brand-500)" />
+                          <span style={{ maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                          <button type="button" onClick={() => removeFile(idx)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: 2 }}><X size={12} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {!isSolicitante && (
@@ -246,7 +371,8 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                   </div>
                   
                   {isCreatingTag && (
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+                      <input type="color" value={tagColor} onChange={e => setTagColor(e.target.value)} style={{ width: 30, height: 30, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer' }} title="Cor da Tag" />
                       <input
                         autoFocus
                         value={newTagName}
@@ -255,7 +381,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                           if (e.key === 'Enter') {
                             e.preventDefault();
                             if (newTagName.trim()) {
-                              await createTag(newTagName.trim(), '#8b5cf6');
+                              await createTag(newTagName.trim(), tagColor);
                               setNewTagName('');
                               setIsCreatingTag(false);
                             }

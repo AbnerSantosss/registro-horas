@@ -46,6 +46,9 @@ model Task {
   sector           String?   @db.VarChar(255)
   direction        String?   @db.VarChar(255)
   reference        String?   @db.Text
+  referenceFiles   String?   @map("reference_files") @db.LongText
+  materialType     String?   @map("material_type") @db.VarChar(100)
+  rejectionReason  String?   @map("rejection_reason") @db.Text
   currentStepIndex Int       @default(0) @map("current_step_index")
   priority         String    @default("normal") @db.VarChar(50)
   brand            String?   @db.VarChar(255)

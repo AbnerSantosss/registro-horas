@@ -1,9 +1,12 @@
 import express from 'express';
+// No multer imports needed as we use Base64 arrays over JSON
 import prisma from '../prisma.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 const generateId = () => Math.random().toString(36).substring(2, 15);
+
+// Base64 reference storage is handled in the creation endpoint transparently
 
 // Get tasks (admin sees all, user sees own)
 router.get('/', authenticate, async (req: AuthRequest, res) => {
@@ -149,6 +152,9 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
       sector: t.sector,
       direction: t.direction,
       reference: t.reference,
+      reference_files: t.referenceFiles,
+      material_type: t.materialType,
+      rejection_reason: t.rejectionReason,
       current_step_index: t.currentStepIndex,
       priority: t.priority,
       brand: t.brand,
@@ -189,8 +195,8 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
 router.post('/', authenticate, async (req: AuthRequest, res) => {
   try {
     const {
-      title, description, deadline, type,
-      network, placement, format, sector, reference,
+      title, description, deadline, type, materialType,
+      network, placement, format, sector, reference, referenceFiles,
       steps, priority, brand, tag_ids,
     } = req.body;
     const creatorId = req.user?.id!;
@@ -220,6 +226,8 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
         format: format || null,
         sector: sector || null,
         reference: reference || null,
+        referenceFiles: referenceFiles ? JSON.stringify(referenceFiles) : null,
+        materialType: materialType || null,
         currentStepIndex: 0,
         priority,
         brand: brand || null,
@@ -354,7 +362,24 @@ router.put('/:id/status', authenticate, async (req: AuthRequest, res) => {
       }
     }
 
-    await prisma.task.update({ where: { id }, data: { status } });
+    let finalStatus = status;
+    if (status === 'done') {
+      finalStatus = 'in_review';
+    }
+
+    if (finalStatus === 'in_progress' && task.status !== 'in_progress') {
+      if (task.creatorId && task.creatorId !== userId) {
+        await prisma.notification.create({
+          data: {
+            id: generateId(),
+            userId: task.creatorId,
+            message: `Sua solicitação foi iniciada: ${task.title}`,
+          },
+        });
+      }
+    }
+
+    await prisma.task.update({ where: { id }, data: { status: finalStatus } });
 
     await prisma.taskHistory.create({
       data: {
@@ -362,13 +387,120 @@ router.put('/:id/status', authenticate, async (req: AuthRequest, res) => {
         taskId: id,
         userId,
         action: 'status_changed',
-        details: `Status changed to ${status}`,
+        details: `Status changed to ${finalStatus}`,
       },
     });
 
-    res.json({ success: true });
+    res.json({ success: true, status: finalStatus });
   } catch (error) {
     console.error('Update status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Review task
+router.post('/:id/review', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { action, reason } = req.body;
+    const userId = req.user?.id!;
+
+    if (req.user?.role !== 'admin' && req.user?.role !== 'coordenador') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const task = await prisma.task.findUnique({ where: { id }, include: { steps: true } });
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    if (action === 'approve') {
+      await prisma.task.update({
+        where: { id },
+        data: { status: 'done', rejectionReason: null },
+      });
+
+      await prisma.taskHistory.create({
+        data: {
+          id: generateId(),
+          taskId: id,
+          userId,
+          action: 'approved',
+          details: 'Task approved by coordinator/admin',
+        },
+      });
+
+      if (task.creatorId !== userId) {
+        const creator = await prisma.user.findUnique({ where: { id: task.creatorId } });
+        await prisma.notification.create({
+          data: {
+            id: generateId(),
+            userId: task.creatorId,
+            message: `Sua solicitação foi aprovada e concluída: ${task.title}`,
+          },
+        });
+        
+        if (creator) {
+          console.log(`\n[EMAIL MOCK] ENVIANDO EMAIL DE APROVAÇÃO`);
+          console.log(`[EMAIL MOCK] Para: ${creator.name} <${creator.email}>`);
+          console.log(`[EMAIL MOCK] Assunto: 🎉 Tarefa Aprovada - ${task.title}`);
+          console.log(`[EMAIL MOCK] Mensagem: Sua solicitação foi analisada e aprovada pelo Coordenador.\n`);
+        }
+      }
+    } else if (action === 'reject') {
+      if (!reason) return res.status(400).json({ error: 'Reason required for rejection' });
+      
+      const lastStepIndex = Math.max(0, task.steps.length - 1);
+      const lastStep = task.steps[lastStepIndex];
+      const assigneeId = lastStep ? lastStep.userId : task.assigneeId;
+
+      await prisma.task.update({
+        where: { id },
+        data: { 
+          status: 'todo', 
+          rejectionReason: reason,
+          currentStepIndex: lastStepIndex,
+          assigneeId: assigneeId
+        },
+      });
+
+      if (lastStep) {
+        await prisma.taskStep.update({
+          where: { id: lastStep.id },
+          data: { status: 'pending' }
+        });
+      }
+
+      await prisma.taskHistory.create({
+        data: {
+          id: generateId(),
+          taskId: id,
+          userId,
+          action: 'rejected',
+          details: `Task rejected: ${reason}`,
+        },
+      });
+
+      if (assigneeId) {
+        const assigneeInfo = await prisma.user.findUnique({ where: { id: assigneeId } });
+        await prisma.notification.create({
+          data: {
+            id: generateId(),
+            userId: assigneeId,
+            message: `Tarefa devolvida para revisão: ${task.title}. Motivo: ${reason}`,
+          },
+        });
+
+        if (assigneeInfo) {
+          console.log(`\n[EMAIL MOCK] ENVIANDO EMAIL DE REPROVAÇÃO`);
+          console.log(`[EMAIL MOCK] Para: ${assigneeInfo.name} <${assigneeInfo.email}>`);
+          console.log(`[EMAIL MOCK] Assunto: ⚠️ Tarefa Devolvida - ${task.title}`);
+          console.log(`[EMAIL MOCK] Mensagem: Sua tarefa foi devolvida para correção. Motivo: ${reason}\n`);
+        }
+      }
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Review task error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -703,6 +835,7 @@ router.get('/stats', authenticate, async (req: AuthRequest, res) => {
         COUNT(*) as total,
         COUNT(CASE WHEN status = 'todo' THEN 1 END) as todo,
         COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress,
+        COUNT(CASE WHEN status = 'in_review' THEN 1 END) as in_review,
         COUNT(CASE WHEN status = 'paused' THEN 1 END) as paused,
         COUNT(CASE WHEN status = 'done' THEN 1 END) as done,
         COUNT(CASE WHEN deadline IS NOT NULL AND deadline < NOW() AND status != 'done' THEN 1 END) as overdue
@@ -717,14 +850,20 @@ router.get('/stats', authenticate, async (req: AuthRequest, res) => {
       where: { status: 'done' }
     });
 
+    const rejectStats = await prisma.taskHistory.count({
+      where: { action: 'rejected' }
+    });
+
     res.json({
       total:       Number(stats.total       ?? 0),
       todo:        Number(stats.todo        ?? 0),
       in_progress: Number(stats.in_progress ?? 0),
+      in_review:   Number(stats.in_review   ?? 0),
       paused:      Number(stats.paused      ?? 0),
       done:        Number(stats.done        ?? 0),
       overdue:     Number(stats.overdue     ?? 0),
       total_pieces:Number(stepStats._sum.pieces ?? 0),
+      total_rejections: Number(rejectStats ?? 0),
     });
   } catch (error) {
     console.error('Get stats error:', error);
@@ -746,6 +885,7 @@ router.get('/reports', authenticate, async (req: AuthRequest, res) => {
         t.id as task_id,
         t.title as task_title,
         t.status as task_status,
+        t.brand as task_brand,
         t.deadline as task_deadline,
         t.type as task_type,
         SUM(
@@ -756,7 +896,8 @@ router.get('/reports', authenticate, async (req: AuthRequest, res) => {
           END
         ) as total_duration,
         COUNT(CASE WHEN te.status = 'paused' THEN 1 END) as pause_count,
-        COALESCE(ts_pieces.total_pieces, 0) as total_pieces
+        COALESCE(ts_pieces.total_pieces, 0) as total_pieces,
+        COALESCE(th_rejects.reject_count, 0) as reject_count
       FROM time_entries te
       JOIN users u ON te.user_id = u.id
       JOIN tasks t ON te.task_id = t.id
@@ -765,8 +906,14 @@ router.get('/reports', authenticate, async (req: AuthRequest, res) => {
         FROM task_steps
         GROUP BY task_id, user_id
       ) ts_pieces ON ts_pieces.task_id = te.task_id AND ts_pieces.user_id = te.user_id
+      LEFT JOIN (
+        SELECT task_id, COUNT(*) as reject_count
+        FROM task_history
+        WHERE action = 'rejected'
+        GROUP BY task_id
+      ) th_rejects ON th_rejects.task_id = t.id
       WHERE te.status IN ('completed', 'paused', 'running')
-      GROUP BY te.user_id, te.task_id
+      GROUP BY te.user_id, te.task_id, u.name, t.title, t.brand, t.status, t.deadline, t.type, ts_pieces.total_pieces, th_rejects.reject_count
       ORDER BY total_duration DESC
     `);
 
@@ -775,7 +922,8 @@ router.get('/reports', authenticate, async (req: AuthRequest, res) => {
       ...r,
       total_duration: Number(r.total_duration ?? 0),
       pause_count: Number(r.pause_count ?? 0),
-      total_pieces: Number(r.total_pieces ?? 0)
+      total_pieces: Number(r.total_pieces ?? 0),
+      reject_count: Number(r.reject_count ?? 0)
     }));
 
     res.json(formatted);

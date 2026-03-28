@@ -27,7 +27,7 @@ export interface Task {
   description: string;
   deadline: string;
   type: string;
-  status: 'todo' | 'in_progress' | 'paused' | 'done';
+  status: 'todo' | 'in_progress' | 'paused' | 'in_review' | 'done';
   assignee_id: string | null;
   creator_id: string;
   created_at: string;
@@ -43,6 +43,9 @@ export interface Task {
   format?: string;
   sector?: string;
   reference?: string;
+  reference_files?: string;
+  material_type?: string;
+  rejection_reason?: string;
   current_step_index?: number;
   steps?: TaskStep[];
   priority?: 'normal' | 'alta' | 'urgente';
