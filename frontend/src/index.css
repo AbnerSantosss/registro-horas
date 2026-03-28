@@ -44,7 +44,7 @@
   --grad-brand: linear-gradient(135deg, var(--brand-600) 0%, var(--accent-500) 100%);
 
   /* Background overlay */
-  --bg-overlay: rgba(248, 249, 252, 0.92);
+  --bg-overlay: rgba(248, 249, 252, 0.85);
 }
 
 .dark {
@@ -63,7 +63,7 @@
   --shadow-brand: 0 4px 20px rgb(79 70 229 / 0.55);
 
   /* Background overlay */
-  --bg-overlay: rgba(8, 11, 16, 0.88);
+  --bg-overlay: rgba(8, 11, 16, 0.80);
 }
 
 /* ── Base ─────────────────────────────────────────── */

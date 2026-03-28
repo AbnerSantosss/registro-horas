@@ -193,9 +193,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'var(--bg-overlay, rgba(8, 11, 16, 0.88))',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          background: 'var(--bg-overlay, rgba(8, 11, 16, 0.80))',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
           zIndex: 1,
         }}
       />
