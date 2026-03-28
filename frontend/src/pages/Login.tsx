@@ -185,7 +185,7 @@ export default function Login() {
           </motion.div>
         </motion.div>
 
-        <motion.p style={S.tagline} variants={fadeUp}>© 2025 Logame Run Task · Todos os direitos reservados</motion.p>
+        <motion.p style={S.tagline} variants={fadeUp}>© {new Date().getFullYear()} Logame Run Task · Todos os direitos reservados</motion.p>
       </motion.div>
 
       {/* ═══ RIGHT PANEL — Form ═══ */}
@@ -321,7 +321,7 @@ export default function Login() {
           {/* Divider */}
           <motion.div variants={fadeUp} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ flex: 1, height: 1, background: C.border }} />
-            <span style={{ fontSize: 11, color: C.text3 }}>Logame © 2025</span>
+            <span style={{ fontSize: 11, color: C.text3 }}>Logame © {new Date().getFullYear()}</span>
             <div style={{ flex: 1, height: 1, background: C.border }} />
           </motion.div>
 
