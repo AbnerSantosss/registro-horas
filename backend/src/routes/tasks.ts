@@ -2,6 +2,7 @@ import express from 'express';
 // No multer imports needed as we use Base64 arrays over JSON
 import prisma from '../prisma.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
+import { sendTaskAssignedEmail } from '../services/emailService.js';
 
 const router = express.Router();
 const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -123,16 +124,19 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
     const userIdsForTime = [...new Set(userTimes.map(u => u.userId))];
     const timeUsersCache = await prisma.user.findMany({
       where: { id: { in: userIdsForTime } },
-      select: { id: true, name: true }
+      select: { id: true, name: true, avatarUrl: true }
     });
-    const timeUsersMap = new Map(timeUsersCache.map(u => [u.id, u.name]));
+    const timeUsersMap = new Map(timeUsersCache.map(u => [u.id, u]));
 
-    const userTimesByTask = new Map<string, { user_name: string, seconds: number }[]>();
+    const userTimesByTask = new Map<string, { user_id: string, user_name: string, seconds: number, avatar_url: string | null }[]>();
     for (const ut of userTimes) {
       if (!userTimesByTask.has(ut.taskId)) userTimesByTask.set(ut.taskId, []);
+      const uData = timeUsersMap.get(ut.userId);
       userTimesByTask.get(ut.taskId)?.push({
-        user_name: timeUsersMap.get(ut.userId) || 'Unknown',
+        user_id: ut.userId,
+        user_name: uData?.name || 'Unknown',
         seconds: ut._sum?.duration ?? 0,
+        avatar_url: uData?.avatarUrl ?? null,
       });
     }
 
@@ -269,6 +273,11 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
           message: `New task assigned to you: ${title}`,
         },
       });
+
+      const assigneeInfo = await prisma.user.findUnique({ where: { id: initialAssigneeId } });
+      if (assigneeInfo) {
+        sendTaskAssignedEmail(assigneeInfo.email, assigneeInfo.name, title, description).catch(console.error);
+      }
     }
 
     res.status(201).json({ id, title, status: 'todo' });
@@ -346,6 +355,11 @@ router.put('/:id/status', authenticate, async (req: AuthRequest, res) => {
               message: `Task moved to your step: ${task.title}`,
             },
           });
+
+          const nextAssigneeInfo = await prisma.user.findUnique({ where: { id: nextStep.userId } });
+          if (nextAssigneeInfo) {
+            sendTaskAssignedEmail(nextAssigneeInfo.email, nextAssigneeInfo.name, task.title, task.description).catch(console.error);
+          }
 
           await prisma.taskHistory.create({
             data: {
@@ -540,7 +554,7 @@ router.post('/:id/transfer', authenticate, async (req: AuthRequest, res) => {
 
     const newAssignee = await prisma.user.findUnique({
       where: { id: assignee_id },
-      select: { name: true },
+      select: { name: true, email: true },
     });
 
     await prisma.taskHistory.create({
@@ -560,6 +574,10 @@ router.post('/:id/transfer', authenticate, async (req: AuthRequest, res) => {
         message: `Task transferred to you: ${task.title}`,
       },
     });
+
+    if (newAssignee) {
+      sendTaskAssignedEmail(newAssignee.email, newAssignee.name, task.title, task.description).catch(console.error);
+    }
 
     res.json({ success: true });
   } catch (error) {
@@ -765,7 +783,7 @@ router.put('/bulk/assign', authenticate, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'assigneeId is required' });
     }
 
-    const assignee = await prisma.user.findUnique({ where: { id: assigneeId }, select: { name: true } });
+    const assignee = await prisma.user.findUnique({ where: { id: assigneeId }, select: { name: true, email: true } });
     if (!assignee) return res.status(404).json({ error: 'Assignee not found' });
 
     await prisma.task.updateMany({
@@ -791,6 +809,8 @@ router.put('/bulk/assign', authenticate, async (req: AuthRequest, res) => {
         message: `${taskIds.length} task(s) assigned to you`,
       },
     });
+
+    sendTaskAssignedEmail(assignee.email, assignee.name, `${taskIds.length} novas tarefas processadas em lote`, 'Você foi designado responsável por múltiplas tarefas de uma só vez. Por favor, acesse o painel para listar as tarefas a você atribuídas.').catch(console.error);
 
     res.json({ success: true, updated: taskIds.length });
   } catch (error) {

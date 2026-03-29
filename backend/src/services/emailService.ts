@@ -183,3 +183,91 @@ export async function sendPasswordResetEmail(email: string, resetCode: string): 
     return { success: false, error: err.message || 'Unknown email error' };
   }
 }
+
+export async function sendTaskAssignedEmail(email: string, name: string, taskTitle: string, taskDescription?: string | null): Promise<{ success: boolean; error?: string }> {
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+
+  if (!gmailUser || !gmailPass) {
+    console.warn('⚠️ GMAIL_USER ou GMAIL_APP_PASSWORD não configurados. Email de atribuição não enviado.');
+    return { success: false, error: 'Gmail credentials not configured' };
+  }
+
+  const APP_URL = process.env.APP_URL || 'http://localhost:5173';
+  const displayDesc = taskDescription 
+    ? taskDescription.replace(/\n/g, '<br>') 
+    : '<span style="font-style: italic; color: #9ca3af;">Nenhuma descrição fornecida.</span>';
+
+  try {
+    const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; color: #1f2937; }
+        .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .header { background-color: #2563eb; padding: 30px 40px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 1px; }
+        .content { padding: 40px; }
+        .content h2 { margin-top: 0; font-size: 22px; color: #111827; }
+        .task-card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-top: 24px; margin-bottom: 32px; border-left: 4px solid #3b82f6; }
+        .task-title { font-size: 18px; font-weight: 700; color: #1e3a8a; margin: 0 0 16px 0; display: flex; align-items: center; }
+        .task-desc { font-size: 15px; color: #475569; line-height: 1.6; margin: 0; }
+        .btn-container { text-align: center; margin-top: 32px; }
+        .btn { display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; transition: background-color 0.2s; }
+        .btn:hover { background-color: #1d4ed8; }
+        .footer { background-color: #f9fafb; padding: 24px; text-align: center; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+        @media only screen and (max-width: 600px) {
+            .container { margin: 15px; border-radius: 8px; }
+            .content { padding: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center">
+                <div class="container">
+                    <div class="header">
+                        <h1>LOGAME</h1>
+                    </div>
+                    <div class="content">
+                        <h2>Olá, ${name}!</h2>
+                        <p style="font-size: 16px; line-height: 1.5; color: #374151;">Você acabou de receber uma nova atribuição no painel. Confira os detalhes abaixo:</p>
+                        
+                        <div class="task-card">
+                            <h3 class="task-title">📌 ${taskTitle}</h3>
+                            <p class="task-desc">${displayDesc}</p>
+                        </div>
+                        
+                        <div class="btn-container">
+                            <a href="${APP_URL}" class="btn">Acessar Tarefa</a>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        Este é um e-mail automático do sistema LOGAME. Por favor, não responda.<br>
+                        © ${new Date().getFullYear()} LOGAME. Todos os direitos reservados.
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`;
+
+    await getTransporter().sendMail({
+      from: `LOGAME <${gmailUser}>`,
+      to: email,
+      subject: `LOGAME — Nova Tarefa: ${taskTitle}`,
+      html,
+    });
+    console.log(`✅ Task assignment email sent to ${email}`);
+    return { success: true };
+  } catch (err: any) {
+    console.error('❌ Task assignment email send failed:', err.message);
+    return { success: false, error: err.message || 'Unknown email error' };
+  }
+}
+

@@ -35,7 +35,7 @@ export interface Task {
   creator_name?: string;
   active_start_time?: string | null;
   accumulated_seconds?: number;
-  user_times?: { user_name: string; seconds: number }[];
+  user_times?: { user_id: string; user_name: string; seconds: number; avatar_url: string | null }[];
   
   // New fields
   network?: string;

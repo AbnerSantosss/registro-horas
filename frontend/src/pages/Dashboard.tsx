@@ -138,7 +138,7 @@ export default function Dashboard() {
     search: '', status: [], priority: [], assignee: '', tag: '', sortBy: 'created_at', sortOrder: 'desc',
   });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [allUsers, setAllUsers] = useState<{ id: string; name: string }[]>([]);
+  const [allUsers, setAllUsers] = useState<{ id: string; name: string; avatarUrl?: string | null }[]>([]);
   const [allTags, setAllTags]   = useState<{ id: string; name: string; color: string }[]>([]);
 
   // Fetch users & tags once
@@ -146,7 +146,7 @@ export default function Dashboard() {
     if (!token) return;
     fetch('/api/users', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : [])
-      .then(data => setAllUsers(data.map((u: any) => ({ id: u.id, name: u.name }))))
+      .then(data => setAllUsers(data.map((u: any) => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl }))))
       .catch(() => {});
     fetch('/api/tags', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : [])
@@ -404,9 +404,11 @@ export default function Dashboard() {
                                 ref={prov.innerRef}
                                 {...prov.draggableProps}
                                 {...prov.dragHandleProps}
-                                className="task-card"
+                                className="task-card flex flex-col p-2.5"
+                                onClick={() => setSelectedTask(task)} // Make whole card clickable
                                 style={{
                                   ...prov.draggableProps.style,
+                                  cursor: 'pointer',
                                   opacity: snap.isDragging ? 0.92 : 1,
                                   boxShadow: snap.isDragging ? '0 12px 32px rgb(0 0 0 / 0.25)' : undefined,
                                   border: selectedIds.has(task.id)
@@ -414,295 +416,201 @@ export default function Dashboard() {
                                     : isOverdue
                                       ? '1px solid rgb(239 68 68 / 0.35)'
                                       : '1px solid var(--border)',
+                                  background: 'var(--surface-1)',
+                                  borderRadius: '8px',
+                                  gap: '6px'
                                 }}
                               >
-                                {/* Selection checkbox */}
-                                {user?.role === 'admin' && (
-                                  <div
-                                    className="flex items-center mb-2"
-                                    onClick={e => { e.stopPropagation(); toggleSelect(task.id); }}
-                                    style={{ cursor: 'pointer' }}
-                                  >
-                                    <div
-                                      style={{
-                                        width: 16, height: 16, borderRadius: 4,
-                                        border: selectedIds.has(task.id) ? '2px solid var(--brand-500)' : '2px solid var(--border)',
-                                        background: selectedIds.has(task.id) ? 'var(--brand-500)' : 'transparent',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        transition: 'all 0.15s',
-                                      }}
-                                    >
-                                      {selectedIds.has(task.id) && (
-                                        <Check size={10} style={{ color: '#fff' }} />
-                                      )}
-                                    </div>
-                                    <span className="text-[10px] ml-1.5" style={{ color: 'var(--text-3)' }}>Selecionar</span>
-                                  </div>
-                                )}
-
-                                {/* Badges row */}
-                                <div className="flex flex-wrap gap-1.5 mb-2">
-                                  <span className="badge" style={{ background: 'var(--brand-100)', color: 'var(--brand-700)' }}>
-                                    {task.type}
-                                  </span>
-                                  {(task as any).brand && (
-                                    <div 
-                                      className="flex items-center justify-center w-5 h-5 rounded" 
-                                      style={{ background: 'var(--surface-3)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
-                                      title={(task as any).brand}
-                                    >
-                                      <Briefcase size={10} />
-                                    </div>
-                                  )}
-                                  {isMyStepDone && (
-                                    <span className="badge" style={{ background: 'rgb(34 197 94 / 0.15)', color: '#4ade80' }}>
-                                      <Check size={10} className="mr-0.5" /> Minha etapa ok
-                                    </span>
-                                  )}
-                                  {!isMyStepDone && task.priority && (
-                                    <span className="badge" style={{ background: pStyle.bg, color: pStyle.color }}>
-                                      {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                                    </span>
-                                  )}
-                                  {isOverdue && (
-                                    <span className="badge" style={{ background: 'rgb(239 68 68 / 0.15)', color: '#f87171' }}>
-                                      <AlertTriangle size={10} className="mr-0.5" /> Atrasada
-                                    </span>
-                                  )}
-                                </div>
-                                {/* Tags */}
-                                {(task as any).tags?.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mb-2">
-                                    {((task as any).tags as Array<{ id: string; name: string; color: string }>).map(tag => (
-                                      <span
-                                        key={tag.id}
+                                {/* Header: Selection + Badges */}
+                                <div className="flex justify-between items-start gap-2">
+                                  <div className="flex flex-wrap gap-1 items-center">
+                                    {user?.role === 'admin' && (
+                                      <div
+                                        onClick={e => { e.stopPropagation(); toggleSelect(task.id); }}
+                                        className="mr-1 flex items-center justify-center shrink-0"
                                         style={{
-                                          display: 'inline-block',
-                                          padding: '0.1rem 0.5rem',
-                                          borderRadius: 20,
-                                          fontSize: '0.68rem',
-                                          fontWeight: 600,
-                                          background: tag.color + '25',
-                                          color: tag.color,
-                                          border: `1px solid ${tag.color}55`,
+                                          width: 14, height: 14, borderRadius: 3,
+                                          border: selectedIds.has(task.id) ? 'transparent' : '1.5px solid var(--border)',
+                                          background: selectedIds.has(task.id) ? 'var(--brand-500)' : 'transparent',
+                                          transition: 'all 0.15s',
                                         }}
                                       >
-                                        {tag.name}
+                                        {selectedIds.has(task.id) && <Check size={10} style={{ color: '#fff' }} />}
+                                      </div>
+                                    )}
+                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm" style={{ background: 'var(--brand-100)', color: 'var(--brand-700)' }}>
+                                      {task.type}
+                                    </span>
+                                    {(task as any).brand && (
+                                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm" style={{ background: 'var(--surface-3)', color: 'var(--text-2)' }}>
+                                        {(task as any).brand}
                                       </span>
+                                    )}
+                                    {!isMyStepDone && task.priority && (
+                                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm" style={{ background: pStyle.bg, color: pStyle.color }}>
+                                        {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Tags */}
+                                {(task as any).tags?.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {((task as any).tags as Array<{ id: string; name: string; color: string }>).map(tag => (
+                                      <div key={tag.id} className="h-1.5 w-6 rounded-full" style={{ background: tag.color }} title={tag.name} />
                                     ))}
                                   </div>
                                 )}
 
                                 {/* Title */}
                                 <h4
-                                  className="text-sm font-semibold leading-snug mb-1"
+                                  className="text-[13px] font-medium leading-tight my-0.5"
                                   style={{
                                     color: task.status === 'done' ? 'var(--text-3)' : 'var(--text-1)',
                                     textDecoration: task.status === 'done' ? 'line-through' : 'none',
+                                    wordBreak: 'break-word'
                                   }}
                                 >
                                   {task.title}
                                 </h4>
 
-                                {/* My step instruction */}
+                                {/* Alerts / Info */}
+                                {isOverdue && task.status !== 'done' && (
+                                  <div className="flex items-center gap-1 text-[10px] font-medium" style={{ color: '#f87171' }}>
+                                    <AlertTriangle size={10} /> Atrasada
+                                  </div>
+                                )}
+                                {isMyStepDone && task.status !== 'done' && (
+                                  <div className="flex items-center gap-1 text-[10px] font-medium" style={{ color: '#4ade80' }}>
+                                    <Check size={10} /> Minha etapa ok
+                                  </div>
+                                )}
                                 {!isMyStepDone && isMyTurn && task.status !== 'done' && currentStep?.instruction && (
-                                  <div
-                                    className="text-xs p-2 rounded-lg mb-3"
-                                    style={{
-                                      background: 'var(--brand-50)',
-                                      color: 'var(--brand-700)',
-                                      border: '1px solid var(--brand-100)',
-                                    }}
-                                  >
-                                    <span className="font-semibold">Instrução: </span>
-                                    {currentStep.instruction}
+                                  <div className="text-[11px] p-1.5 rounded bg-[var(--brand-50)] text-[var(--brand-700)] line-clamp-2 mt-1" title={currentStep.instruction}>
+                                    <span className="font-semibold">Instrução: </span>{currentStep.instruction}
                                   </div>
                                 )}
-
-                                {/* Progress bar */}
-                                {!isMyStepDone && (task.total_steps ?? 0) > 0 && task.status !== 'done' && (
-                                  <div className="mb-3">
-                                    <div className="flex justify-between text-[10px] mb-1" style={{ color: 'var(--text-3)' }}>
-                                      <span>Fluxo</span><span>{progress}%</span>
-                                    </div>
-                                    <div className="rounded-full h-1" style={{ background: 'var(--surface-3)' }}>
-                                      <div
-                                        className="h-1 rounded-full transition-all duration-500"
-                                        style={{ width: `${progress}%`, background: 'var(--brand-500)' }}
-                                      />
-                                    </div>
-                                  </div>
+                                {task.status === 'in_review' && (
+                                  <p className="text-[11px] font-medium mt-1" style={{ color: 'var(--brand-600)' }}>Aguardando Revisão</p>
                                 )}
 
-                                {/* Assignee row */}
-                                <div className="flex items-center gap-1.5 mb-2">
-                                  <UserIcon size={12} style={{ color: 'var(--text-3)' }} />
-                                  <span className="text-xs truncate max-w-[120px]" style={{ color: 'var(--text-3)' }}>
-                                    {task.assignee_name || 'Não atribuído'}
-                                  </span>
-                                  <button
-                                    onClick={() => setSelectedTask(task)}
-                                    className="ml-auto w-6 h-6 rounded-md flex items-center justify-center transition-colors"
-                                    style={{ color: 'var(--text-3)' }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
-                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                    title="Ver detalhes"
-                                  >
-                                    <Eye size={13} />
-                                  </button>
-                                </div>
+                                <div className="flex-1" />
 
-                                {/* Tempo Gasto por Usuário */}
-                                {task.user_times && task.user_times.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mb-2">
-                                    {task.user_times.map((ut, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px]"
-                                        style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}
-                                        title={`Tempo de ${ut.user_name}`}
-                                      >
-                                        <UserIcon size={9} />
-                                        <span>{ut.user_name}:</span>
-                                        <span className="font-mono font-semibold">{formatTime(ut.seconds)}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* ── Timer + Actions footer ── */}
-                                <div
-                                  className="pt-3 mt-1 space-y-2"
-                                  style={{ borderTop: '1px solid var(--border)' }}
-                                >
-                                  {task.status !== 'done' && task.status !== 'in_review' && !isMyStepDone ? (
-                                    <>
-                                      {/* ── Cronômetro com background destacado ── */}
-                                      <div
-                                        className="flex items-center justify-between rounded-lg px-3 py-2"
-                                        style={{
-                                          background: task.status === 'in_progress' && task.active_start_time
-                                            ? 'hsl(38 92% 50% / 0.10)'
-                                            : 'var(--surface-2)',
-                                          border: task.status === 'in_progress' && task.active_start_time
-                                            ? '1px solid hsl(38 92% 50% / 0.25)'
-                                            : '1px solid var(--border)',
-                                        }}
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          {task.status === 'in_progress' && task.active_start_time ? (
-                                            <>
-                                              <Clock size={14} className="animate-pulse" style={{ color: 'hsl(38 92% 50%)' }} />
-                                              <LiveTimer startTime={task.active_start_time} offsetSeconds={myTimeBase} />
-                                            </>
-                                          ) : (
-                                            <>
-                                              <Clock size={14} style={{ color: 'var(--text-3)' }} />
-                                              <span className="font-mono text-sm font-semibold tabular-nums" style={{ color: 'var(--text-2)' }}>
-                                                {formatTime(myTimeBase)}
-                                              </span>
-                                            </>
-                                          )}
-                                        </div>
-
-                                        {/* Steps counter dentro do cronômetro */}
-                                        {(task.total_steps ?? 0) > 0 && (
-                                          <span className="text-[10px] tabular-nums font-medium" style={{ color: 'var(--text-3)' }}>
-                                            Etapa {(task.current_step_index ?? 0) + 1}/{task.total_steps}
-                                          </span>
-                                        )}
-                                      </div>
-
-                                      {/* ── Controles: Play/Pause + Botão Tarefa Concluída ── */}
-                                      <div className="flex items-center gap-2">
-                                        {/* Play / Pause */}
-                                        {task.status === 'in_progress' && task.active_start_time ? (
-                                          <button
-                                            onClick={() => openPauseModal(task.id)}
-                                            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
-                                            style={{
-                                              color: 'hsl(38 92% 50%)',
-                                              background: 'hsl(38 92% 50% / 0.08)',
-                                              border: '1px solid hsl(38 92% 50% / 0.2)',
-                                            }}
-                                            onMouseEnter={e => { e.currentTarget.style.background = 'hsl(38 92% 50% / 0.15)'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.background = 'hsl(38 92% 50% / 0.08)'; }}
-                                            title="Pausar"
-                                          >
-                                            <PauseCircle size={14} />
-                                            Pausar
-                                          </button>
-                                        ) : (
-                                          <button
-                                            onClick={() => handleTimeAction(task.id, 'start')}
-                                            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
-                                            style={{
-                                              color: 'var(--brand-500)',
-                                              background: 'var(--brand-50)',
-                                              border: '1px solid var(--brand-100, var(--brand-50))',
-                                            }}
-                                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--brand-100, hsl(var(--brand-hue, 150) 60% 90%))'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.background = 'var(--brand-50)'; }}
-                                            title={task.status === 'paused' || (task.accumulated_seconds && task.accumulated_seconds > 0) ? 'Continuar' : 'Iniciar'}
-                                          >
-                                            <PlayCircle size={14} />
-                                            {task.status === 'paused' || (task.accumulated_seconds && task.accumulated_seconds > 0) ? 'Continuar' : 'Iniciar'}
-                                          </button>
-                                        )}
-
-                                        {/* Botão Tarefa Concluída — com texto nítido */}
-                                        <button
-                                          onClick={() => { setTaskToComplete(task.id); setMaterialLink(''); setComments(''); setPieces(''); }}
-                                          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold ml-auto transition-all"
-                                          style={{
-                                            color: '#fff',
-                                            background: 'hsl(142 71% 45%)',
-                                          }}
-                                          onMouseEnter={e => { e.currentTarget.style.background = 'hsl(142 71% 38%)'; }}
-                                          onMouseLeave={e => { e.currentTarget.style.background = 'hsl(142 71% 45%)'; }}
-                                          title="Concluir tarefa"
-                                        >
-                                          <CheckCircle2 size={14} />
-                                          Tarefa Concluída
-                                        </button>
-                                      </div>
-                                    </>
-                                  ) : task.status === 'in_review' ? (
-                                    /* ── Estado de Revisão ── */
-                                    <div className="flex flex-col gap-2 pt-2 mt-2" style={{ borderTop: '1px solid var(--border)' }}>
-                                      <p className="text-xs text-center font-medium" style={{ color: 'var(--brand-600)' }}>Aguardando Revisão Final</p>
-                                      {(user?.role === 'admin' || user?.role === 'coordenador') && (
-                                        <div className="flex gap-2">
-                                          <button onClick={() => handleReview(task.id, true)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded bg-green-500/10 text-green-600 border border-green-500/20 hover:bg-green-500/20 text-xs font-bold transition-colors">
-                                            <CheckCircle2 size={14} /> Aprovar
-                                          </button>
-                                          <button onClick={() => setRejectingTaskId(task.id)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20 text-xs font-bold transition-colors">
-                                            <AlertTriangle size={14} /> Reprovar
-                                          </button>
-                                        </div>
+                                {/* Footer: Controls & Avatars */}
+                                <div className="flex items-center justify-between pt-2 mt-1" style={{ borderTop: '1px solid var(--border)' }}>
+                                  
+                                  {/* Left: Time and Actions */}
+                                  <div className="flex items-center gap-1.5 text-[var(--text-3)]">
+                                    
+                                    {/* Time Block */}
+                                    <div 
+                                      className="flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded"
+                                      style={{ 
+                                        background: task.status === 'in_progress' ? 'hsl(38 92% 50% / 0.15)' : 'var(--surface-2)',
+                                        color: task.status === 'in_progress' ? 'hsl(38 92% 50%)' : 'var(--text-2)',
+                                        border: task.status === 'in_progress' ? '1px solid hsl(38 92% 50% / 0.3)' : '1px solid transparent'
+                                      }}
+                                    >
+                                      <Clock size={11} className={task.status === 'in_progress' ? "animate-pulse" : ""} />
+                                      {task.status === 'in_progress' && task.active_start_time ? (
+                                        <LiveTimer startTime={task.active_start_time} offsetSeconds={myTimeBase} />
+                                      ) : (
+                                        <span className="font-mono tabular-nums">{formatTime(task.status === 'done' ? task.accumulated_seconds || 0 : myTimeBase)}</span>
                                       )}
                                     </div>
-                                  ) : (
-                                    /* ── Estado concluído ── */
-                                    <div
-                                      className="flex items-center justify-between rounded-lg px-3 py-2"
-                                      style={{ background: 'hsl(142 71% 45% / 0.08)', border: '1px solid hsl(142 71% 45% / 0.2)' }}
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <Clock size={14} style={{ color: 'var(--text-3)' }} />
-                                        <span className="font-mono text-sm font-semibold tabular-nums" style={{ color: 'var(--text-2)' }}>
-                                          {formatTime(task.accumulated_seconds || 0)}
-                                        </span>
+
+                                    {/* Action buttons (only if actionable by me) */}
+                                    {task.status !== 'done' && task.status !== 'in_review' && !isMyStepDone && (
+                                      <div className="flex items-center gap-0.5">
+                                        {task.status === 'in_progress' && task.active_start_time ? (
+                                          <button onClick={(e) => { e.stopPropagation(); openPauseModal(task.id); }} className="p-1 rounded text-[hsl(38_92%_50%)] hover:bg-[hsl(38_92%_50%_/_0.15)] transition-colors" title="Pausar Timer">
+                                              <PauseCircle size={15} />
+                                          </button>
+                                        ) : (
+                                          <button onClick={(e) => { e.stopPropagation(); handleTimeAction(task.id, 'start'); }} className="p-1 rounded text-[var(--brand-500)] hover:bg-[var(--brand-100)] transition-colors" title="Iniciar Timer">
+                                              <PlayCircle size={15} />
+                                          </button>
+                                        )}
+                                        <button onClick={(e) => { e.stopPropagation(); setTaskToComplete(task.id); setMaterialLink(''); setComments(''); setPieces(''); }} className="p-1 rounded text-[hsl(142_71%_45%)] hover:bg-[hsl(142_71%_45%_/_0.15)] transition-colors" title="Concluir Etapa">
+                                            <CheckCircle2 size={15} />
+                                        </button>
                                       </div>
-                                      <span
-                                        className="text-[11px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1"
-                                        style={{ background: 'hsl(142 71% 45% / 0.15)', color: '#4ade80' }}
-                                      >
-                                        <CheckCircle2 size={12} />
-                                        Concluído
-                                      </span>
-                                    </div>
-                                  )}
+                                    )}
+
+                                    {/* Admin review controls */}
+                                    {task.status === 'in_review' && (user?.role === 'admin' || user?.role === 'coordenador') && (
+                                      <div className="flex items-center gap-0.5 ml-1">
+                                        <button onClick={(e) => { e.stopPropagation(); handleReview(task.id, true); }} className="p-1 rounded text-[hsl(142_71%_45%)] hover:bg-[hsl(142_71%_45%_/_0.15)] transition-colors" title="Aprovar Tarefa">
+                                          <CheckCircle2 size={15} />
+                                        </button>
+                                        <button onClick={(e) => { e.stopPropagation(); setRejectingTaskId(task.id); }} className="p-1 rounded text-[hsl(0_84%_60%)] hover:bg-[hsl(0_84%_60%_/_0.15)] transition-colors" title="Reprovar Tarefa">
+                                          <AlertTriangle size={15} />
+                                        </button>
+                                      </div>
+                                    )}
+
+                                  </div>
+
+                                  {/* Right: Avatars */}
+                                  <div className="flex items-center -space-x-1.5 shrink-0">
+                                    {(() => {
+                                      const uniqueMembers = new Map<string, {name: string, avatarUrl: string|null}>();
+                                      if (task.assignee_id) {
+                                          const a = allUsers.find(u => u.id === task.assignee_id);
+                                          if (a) {
+                                            const isMe = a.id === user?.id;
+                                            uniqueMembers.set(a.id, {
+                                              name: isMe && user?.name ? user.name : a.name, 
+                                              avatarUrl: isMe && user?.avatarUrl !== undefined ? user.avatarUrl : (a.avatarUrl || null)
+                                            });
+                                          }
+                                      }
+                                      task.user_times?.forEach(ut => {
+                                          if (ut.user_id && ut.user_name && !uniqueMembers.has(ut.user_id)) {
+                                            const isMe = ut.user_id === user?.id;
+                                            uniqueMembers.set(ut.user_id, {
+                                              name: isMe && user?.name ? user.name : ut.user_name, 
+                                              avatarUrl: isMe && user?.avatarUrl !== undefined ? user.avatarUrl : (ut.avatar_url || null)
+                                            });
+                                          }
+                                      });
+                                      
+                                      const members = Array.from(uniqueMembers.values());
+                                      const maxAvatars = 3;
+                                      const showMembers = members.slice(0, maxAvatars);
+                                      const extra = members.length > maxAvatars ? members.length - maxAvatars : 0;
+                                      
+                                      if (members.length === 0) {
+                                        return <div className="text-[10px] text-[var(--text-3)]" title="Não atribuído"><UserIcon size={12} /></div>;
+                                      }
+                                      
+                                      return (
+                                        <>
+                                          {showMembers.map((m, i) => (
+                                            <div 
+                                              key={i} 
+                                              className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white shadow-sm bg-cover bg-center" 
+                                              style={{ 
+                                                backgroundImage: m.avatarUrl ? `url(${m.avatarUrl})` : 'none',
+                                                backgroundColor: m.avatarUrl ? 'transparent' : 'var(--brand-400)',
+                                                border: '1.5px solid var(--surface-1)',
+                                                zIndex: 10 - i 
+                                              }} 
+                                              title={m.name}
+                                            >
+                                              {!m.avatarUrl && m.name.substring(0,2).toUpperCase()}
+                                            </div>
+                                          ))}
+                                          {extra > 0 && (
+                                            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold bg-[var(--surface-3)] text-[var(--text-3)] shadow-sm" style={{ border: '1.5px solid var(--surface-1)', zIndex: 0 }} title={`+${extra} outros`}>
+                                              +{extra}
+                                            </div>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
                                 </div>
                               </div>
                             )}

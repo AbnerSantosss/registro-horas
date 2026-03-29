@@ -10,7 +10,7 @@ const generateId = () => Math.random().toString(36).substring(2, 15);
 router.get('/', authenticate, async (req: AuthRequest, res) => {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, position: true, brands: true },
+      select: { id: true, name: true, email: true, role: true, position: true, brands: true, avatarUrl: true },
     });
     res.json(users.map(u => ({
       ...u,
@@ -77,7 +77,7 @@ router.put('/:id', authenticate, requireAdmin, async (req: AuthRequest, res) => 
 
     const updated = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, email: true, role: true, position: true, brands: true },
+      select: { id: true, name: true, email: true, role: true, position: true, brands: true, avatarUrl: true },
     });
 
     res.json({
