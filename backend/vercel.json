@@ -12,5 +12,11 @@
       "src": "/(.*)",
       "dest": "src/server.ts"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/overdue-tasks?secret=cron-runtask-2025",
+      "schedule": "0 11 * * *"
+    }
   ]
 }

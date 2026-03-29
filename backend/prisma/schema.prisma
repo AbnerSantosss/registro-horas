@@ -24,6 +24,7 @@ model User {
   timeEntries    TimeEntry[]
   comments       Comment[]
   notifications  Notification[]
+  pushSubscriptions PushSubscription[]
   taskHistory    TaskHistory[]
   passwordResets PasswordReset[]
 
@@ -115,13 +116,31 @@ model Comment {
 model Notification {
   id        String   @id @db.VarChar(191)
   userId    String   @map("user_id") @db.VarChar(191)
+  title     String   @db.VarChar(255)
   message   String   @db.Text
+  type      String   @db.VarChar(50)
+  taskId    String?  @map("task_id") @db.VarChar(191)
   read      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id])
 
+  @@index([userId, read])
   @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @db.VarChar(191)
+  userId    String   @map("user_id") @db.VarChar(191)
+  endpoint  String   @db.Text
+  p256dh    String   @db.VarChar(255)
+  auth      String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 model TaskHistory {

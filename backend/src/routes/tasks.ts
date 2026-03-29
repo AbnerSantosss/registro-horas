@@ -3,6 +3,7 @@ import express from 'express';
 import prisma from '../prisma.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { sendTaskAssignedEmail } from '../services/emailService.js';
+import { notify, getAdminAndCoordinatorIds, getTaskInvolvedUserIds } from '../services/notificationService.js';
 
 const router = express.Router();
 const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -266,12 +267,12 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
     });
 
     if (initialAssigneeId && initialAssigneeId !== creatorId) {
-      await prisma.notification.create({
-        data: {
-          id: generateId(),
-          userId: initialAssigneeId,
-          message: `New task assigned to you: ${title}`,
-        },
+      await notify({
+        userIds: [initialAssigneeId],
+        title: '📋 Nova Tarefa Atribuída',
+        message: `Uma nova tarefa foi atribuída a você: ${title}`,
+        type: 'task_assigned',
+        taskId: id,
       });
 
       const assigneeInfo = await prisma.user.findUnique({ where: { id: initialAssigneeId } });
@@ -348,12 +349,12 @@ router.put('/:id/status', authenticate, async (req: AuthRequest, res) => {
             data: { status: 'todo', assigneeId: nextStep.userId, currentStepIndex: nextStepIndex },
           });
 
-          await prisma.notification.create({
-            data: {
-              id: generateId(),
-              userId: nextStep.userId,
-              message: `Task moved to your step: ${task.title}`,
-            },
+          await notify({
+            userIds: [nextStep.userId],
+            title: '📋 Tarefa na sua etapa',
+            message: `A tarefa "${task.title}" chegou à sua etapa de produção.`,
+            type: 'task_assigned',
+            taskId: id,
           });
 
           const nextAssigneeInfo = await prisma.user.findUnique({ where: { id: nextStep.userId } });
@@ -382,15 +383,15 @@ router.put('/:id/status', authenticate, async (req: AuthRequest, res) => {
     }
 
     if (finalStatus === 'in_progress' && task.status !== 'in_progress') {
-      if (task.creatorId && task.creatorId !== userId) {
-        await prisma.notification.create({
-          data: {
-            id: generateId(),
-            userId: task.creatorId,
-            message: `Sua solicitação foi iniciada: ${task.title}`,
-          },
-        });
-      }
+      const involvedIds = await getTaskInvolvedUserIds(id);
+      const filtered = involvedIds.filter(uid => uid !== userId);
+      await notify({
+        userIds: filtered,
+        title: '🚀 Tarefa Iniciada',
+        message: `A tarefa "${task.title}" foi iniciada.`,
+        type: 'task_started',
+        taskId: id,
+      });
     }
 
     await prisma.task.update({ where: { id }, data: { status: finalStatus } });
@@ -444,20 +445,17 @@ router.post('/:id/review', authenticate, async (req: AuthRequest, res) => {
 
       if (task.creatorId !== userId) {
         const creator = await prisma.user.findUnique({ where: { id: task.creatorId } });
-        await prisma.notification.create({
-          data: {
-            id: generateId(),
-            userId: task.creatorId,
-            message: `Sua solicitação foi aprovada e concluída: ${task.title}`,
-          },
+        const involvedIds = await getTaskInvolvedUserIds(id);
+        const adminIds = await getAdminAndCoordinatorIds();
+        const allIds = [...new Set([...involvedIds, ...adminIds])].filter(uid => uid !== userId);
+
+        await notify({
+          userIds: allIds,
+          title: '✅ Tarefa Concluída',
+          message: `A tarefa "${task.title}" foi aprovada e concluída!`,
+          type: 'task_completed',
+          taskId: id,
         });
-        
-        if (creator) {
-          console.log(`\n[EMAIL MOCK] ENVIANDO EMAIL DE APROVAÇÃO`);
-          console.log(`[EMAIL MOCK] Para: ${creator.name} <${creator.email}>`);
-          console.log(`[EMAIL MOCK] Assunto: 🎉 Tarefa Aprovada - ${task.title}`);
-          console.log(`[EMAIL MOCK] Mensagem: Sua solicitação foi analisada e aprovada pelo Coordenador.\n`);
-        }
       }
     } else if (action === 'reject') {
       if (!reason) return res.status(400).json({ error: 'Reason required for rejection' });
@@ -494,21 +492,17 @@ router.post('/:id/review', authenticate, async (req: AuthRequest, res) => {
       });
 
       if (assigneeId) {
-        const assigneeInfo = await prisma.user.findUnique({ where: { id: assigneeId } });
-        await prisma.notification.create({
-          data: {
-            id: generateId(),
-            userId: assigneeId,
-            message: `Tarefa devolvida para revisão: ${task.title}. Motivo: ${reason}`,
-          },
-        });
+        const involvedIds = await getTaskInvolvedUserIds(id);
+        const adminIds = await getAdminAndCoordinatorIds();
+        const allIds = [...new Set([...involvedIds, ...adminIds])].filter(uid => uid !== userId);
 
-        if (assigneeInfo) {
-          console.log(`\n[EMAIL MOCK] ENVIANDO EMAIL DE REPROVAÇÃO`);
-          console.log(`[EMAIL MOCK] Para: ${assigneeInfo.name} <${assigneeInfo.email}>`);
-          console.log(`[EMAIL MOCK] Assunto: ⚠️ Tarefa Devolvida - ${task.title}`);
-          console.log(`[EMAIL MOCK] Mensagem: Sua tarefa foi devolvida para correção. Motivo: ${reason}\n`);
-        }
+        await notify({
+          userIds: allIds,
+          title: '❌ Tarefa Reprovada',
+          message: `A tarefa "${task.title}" foi reprovada. Motivo: ${reason}`,
+          type: 'task_rejected',
+          taskId: id,
+        });
       }
     }
 
@@ -567,12 +561,12 @@ router.post('/:id/transfer', authenticate, async (req: AuthRequest, res) => {
       },
     });
 
-    await prisma.notification.create({
-      data: {
-        id: generateId(),
-        userId: assignee_id,
-        message: `Task transferred to you: ${task.title}`,
-      },
+    await notify({
+      userIds: [assignee_id],
+      title: '🔄 Tarefa Transferida',
+      message: `A tarefa "${task.title}" foi transferida para você.`,
+      type: 'task_transferred',
+      taskId: id,
     });
 
     if (newAssignee) {
@@ -802,12 +796,11 @@ router.put('/bulk/assign', authenticate, async (req: AuthRequest, res) => {
     });
 
     // Notify the new assignee
-    await prisma.notification.create({
-      data: {
-        id: generateId(),
-        userId: assigneeId,
-        message: `${taskIds.length} task(s) assigned to you`,
-      },
+    await notify({
+      userIds: [assigneeId],
+      title: '📋 Tarefas Atribuídas em Lote',
+      message: `${taskIds.length} tarefa(s) foram atribuídas a você.`,
+      type: 'task_assigned',
     });
 
     sendTaskAssignedEmail(assignee.email, assignee.name, `${taskIds.length} novas tarefas processadas em lote`, 'Você foi designado responsável por múltiplas tarefas de uma só vez. Por favor, acesse o painel para listar as tarefas a você atribuídas.').catch(console.error);

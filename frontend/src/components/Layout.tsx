@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useBrand, BrandOption, getBrandAsset } from '../context/BrandContext';
 import { LogOut, LayoutDashboard, Users, Moon, Sun, FileText, ChevronDown, Settings } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import NotificationBell from './NotificationBell';
 
 const NAV_ITEMS_COMMON = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -155,14 +156,6 @@ function SidebarLogo() {
           />
         )}
       </div>
-      <button
-        onClick={toggleTheme}
-        className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--surface-3)] shrink-0"
-        style={{ color: 'var(--text-3)' }}
-        title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-      >
-        {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-      </button>
     </div>
   );
 }
@@ -170,6 +163,7 @@ function SidebarLogo() {
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const { selectedBrand } = useBrand();
+  const { theme, toggleTheme } = useTheme();
   const initial = user?.name?.charAt(0).toUpperCase() ?? '?';
   
   const getBrandBackground = (brandName?: string) => {
@@ -341,6 +335,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* ── Main ──────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden relative" style={{ zIndex: 2 }}>
+        
+        {/* Top Header */}
+        <header className="h-14 shrink-0 flex items-center justify-end px-6 relative z-50">
+          <div className="flex items-center gap-4">
+             <NotificationBell />
+             <button
+               onClick={toggleTheme}
+               className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--surface-3)] shrink-0"
+               style={{ color: 'var(--text-2)' }}
+               title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+             >
+               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+             </button>
+          </div>
+        </header>
+
         <main className="flex-1 overflow-x-auto overflow-y-auto relative">
           {children}
         </main>

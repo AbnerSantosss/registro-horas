@@ -87,6 +87,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
   const [tagColor, setTagColor]     = useState('#8b5cf6');
   const [steps, setSteps]           = useState<{ id: string; user_id: string; instruction: string; pieces: number }[]>([]);
   const [materialType, setMaterialType] = useState('');
+  const [customMaterial, setCustomMaterial] = useState('');
   const [subMaterial, setSubMaterial] = useState('');
   const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
   const [shouldLoadDraft, setShouldLoadDraft] = useState(true);
@@ -110,6 +111,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
           if (p.description) setDescription(p.description);
           if (p.deadline) setDeadline(new Date(p.deadline));
           if (p.materialType) setMaterialType(p.materialType);
+          if (p.customMaterial) setCustomMaterial(p.customMaterial);
           if (p.subMaterial) setSubMaterial(p.subMaterial);
           if (p.network) setNetwork(p.network);
           if (p.brand) setBrand(p.brand);
@@ -130,10 +132,10 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
 
   useEffect(() => {
     if (!shouldLoadDraft && title) {
-      const draft = { title, description, deadline, materialType, subMaterial, network, brand, customBrand, reference };
+      const draft = { title, description, deadline, materialType, customMaterial, subMaterial, network, brand, customBrand, reference };
       localStorage.setItem('draft_new_task', JSON.stringify(draft));
     }
-  }, [title, description, deadline, materialType, subMaterial, network, brand, customBrand, reference, shouldLoadDraft]);
+  }, [title, description, deadline, materialType, customMaterial, subMaterial, network, brand, customBrand, reference, shouldLoadDraft]);
 
   const addStep    = () => setSteps(s => [...s, { id: crypto.randomUUID(), user_id: '', instruction: '', pieces: 0 }]);
   const removeStep = (id: string) => setSteps(s => s.length > 1 ? s.filter(x => x.id !== id) : s);
@@ -172,7 +174,9 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
 
       const finalSector = sectorType === 'Outro' ? customSector : sectorType;
       const finalBrand = brand === 'Outros' ? customBrand : brand;
-      const finalMaterial = materialType === 'Tráfego Pago' ? `Tráfego Pago - ${subMaterial}` : materialType;
+      let finalMaterial = materialType;
+      if (materialType === 'Tráfego Pago') finalMaterial = `Tráfego Pago - ${subMaterial}`;
+      if (materialType === 'Outro') finalMaterial = customMaterial;
       
       const placementsToCreate = selectedPlacements.length > 0 ? selectedPlacements : [''];
       const formatsToCreate = selectedFormats.length > 0 ? selectedFormats : [''];
@@ -202,7 +206,9 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
   };
 
   if (!isOpen) return null;
-  const availableFormats = ['Vídeo', 'Imagem', 'Ambos'];
+  
+  const matchedFormatKey = Object.keys(FORMATS_BY_NETWORK).find(k => k.toLowerCase() === network?.toLowerCase());
+  const availableFormats = matchedFormatKey ? FORMATS_BY_NETWORK[matchedFormatKey] : ['Vídeo', 'Imagem', 'Ambos'];
 
   return (
     <div
@@ -236,39 +242,12 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <form id="task-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-            {/* Tipo de Material */}
-            <section style={{ padding: '1rem', background: 'var(--brand-50)', border: '1px solid var(--brand-200)', borderRadius: 12 }}>
-              <SectionLabel icon={<Layers size={14} color="var(--brand-600)" />} title="Tipo de Material (Obrigatório)" />
-              <div style={{ display: 'grid', gridTemplateColumns: materialType === 'Tráfego Pago' ? '1fr 1fr' : '1fr', gap: '1rem', marginTop: 12 }}>
-                <FormField label="Categoria">
-                  <select value={materialType} onChange={e => { setMaterialType(e.target.value); setSubMaterial(''); }} className="form-input" style={{ borderColor: 'var(--brand-300)' }} required>
-                    <option value="">Selecione...</option>
-                    <option value="Orgânico">Orgânico</option>
-                    <option value="CRM">CRM</option>
-                    <option value="Tráfego Pago">Tráfego Pago</option>
-                  </select>
-                </FormField>
-                {materialType === 'Tráfego Pago' && (
-                  <FormField label="Rede de Divulgação">
-                    <select value={subMaterial} onChange={e => setSubMaterial(e.target.value)} className="form-input" style={{ borderColor: 'var(--brand-300)' }} required>
-                      <option value="">Selecione...</option>
-                      <option value="Meta">Meta</option>
-                      <option value="Google">Google</option>
-                      <option value="Taboola">Taboola</option>
-                      <option value="Kwai">Kwai</option>
-                      <option value="X">X (Twitter)</option>
-                    </select>
-                  </FormField>
-                )}
-              </div>
-            </section>
-
-            {/* Básico */}
-            <section>
-              <SectionLabel icon={<Tag size={14} />} title="Informações Básicas" />
-              <div style={{ display: 'grid', gridTemplateColumns: isSolicitante ? '1fr' : '1fr auto', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                <FormField label="Título *">
-                  <input required value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Arte para campanha de verão" className="form-input" />
+            {/* Informações Iniciais */}
+            <section style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: isSolicitante ? '1fr' : '1fr auto', gap: '0.75rem' }}>
+                <FormField label="Título da Tarefa *">
+                  <input required value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Arte para campanha de verão" className="form-input" style={{ fontSize: '1.1rem', padding: '0.75rem 1rem', borderColor: 'var(--brand-300)' }} autoFocus />
                 </FormField>
                 {!isSolicitante && (
                   <FormField label="Prioridade">
@@ -276,7 +255,7 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                       {PRIORITY_OPTIONS.map(p => (
                         <button key={p.value} type="button" onClick={() => setPriority(p.value)}
                           style={{
-                            padding: '0.3rem 0.75rem', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
+                            padding: '0.4rem 0.8rem', borderRadius: 20, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
                             border: `1.5px solid ${priority === p.value ? p.color : 'var(--border)'}`,
                             background: priority === p.value ? p.color + '20' : 'var(--surface-2)',
                             color: priority === p.value ? p.color : 'var(--text-2)',
@@ -288,6 +267,46 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
                   </FormField>
                 )}
               </div>
+
+              {/* Tipo de Material */}
+              <div style={{ padding: '1.25rem', background: 'var(--brand-50)', border: '1px solid var(--brand-200)', borderRadius: 12 }}>
+                <SectionLabel icon={<Layers size={14} color="var(--brand-600)" />} title="Categoria de Divulgação (Obrigatório)" />
+                <div style={{ display: 'grid', gridTemplateColumns: (materialType === 'Tráfego Pago' || materialType === 'Outro') ? '1fr 1fr' : '1fr', gap: '1rem', marginTop: 12 }}>
+                  <FormField label="Tipo de Divulgação">
+                    <select value={materialType} onChange={e => { setMaterialType(e.target.value); setSubMaterial(''); setCustomMaterial(''); }} className="form-input" style={{ borderColor: 'var(--brand-300)' }} required>
+                      <option value="">Selecione...</option>
+                      <option value="Orgânico">Orgânico</option>
+                      <option value="Tráfego Pago">Tráfego Pago</option>
+                      <option value="Outro">Outro...</option>
+                    </select>
+                  </FormField>
+                  {materialType === 'Tráfego Pago' && (
+                    <FormField label="Rede de Anúncios">
+                      <select value={subMaterial} onChange={e => setSubMaterial(e.target.value)} className="form-input" style={{ borderColor: 'var(--brand-300)' }} required>
+                        <option value="">Selecione...</option>
+                        <option value="Meta Ads">Meta Ads</option>
+                        <option value="Google Ads">Google Ads</option>
+                        <option value="Taboola">Taboola</option>
+                        <option value="Kwai Ads">Kwai Ads</option>
+                        <option value="TikTok Ads">TikTok Ads</option>
+                        <option value="X Ads">X Ads</option>
+                        <option value="Outro">Outro...</option>
+                      </select>
+                    </FormField>
+                  )}
+                  {materialType === 'Outro' && (
+                    <FormField label="Especifique a Categoria">
+                      <input required value={customMaterial} onChange={e => setCustomMaterial(e.target.value)} placeholder="Ex: Material Interno" className="form-input" style={{ borderColor: 'var(--brand-300)' }} />
+                    </FormField>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Complementares */}
+            <section>
+              <SectionLabel icon={<Tag size={14} />} title="Informações Complementares" />
+
 
               <FormField label="Descrição">
                 <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Briefing, copy, detalhes..." className="form-input" style={{ resize: 'vertical' }} />
@@ -360,9 +379,9 @@ export default function NewTaskModal({ isOpen, onClose, onTaskCreated }: NewTask
               </div>
 
               {!isSolicitante && (
-                <div style={{ marginTop: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-2)' }}>Tags</label>
+                <div style={{ marginTop: '1.25rem', padding: '1rem', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 6 }}><Tag size={14} color="var(--brand-500)"/> Tags de Identificação</label>
                     {!isCreatingTag && (
                       <button type="button" onClick={() => setIsCreatingTag(true)} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Plus size={12} /> Nova Tag

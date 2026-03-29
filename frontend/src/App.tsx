@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { BrandProvider } from './context/BrandContext';
 import { TagProvider } from './context/TagContext';
 import { PlatformProvider } from './context/PlatformContext';
+import { NotificationProvider } from './context/NotificationContext';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -39,6 +40,7 @@ export default function App() {
           <TagProvider>
             <PlatformProvider>
               <Router>
+                <NotificationProvider>
                 <Routes>
                   <Route path="/login" element={<Login />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -79,6 +81,7 @@ export default function App() {
                     </ProtectedRoute>
                   } />
                 </Routes>
+                </NotificationProvider>
               </Router>
             </PlatformProvider>
           </TagProvider>

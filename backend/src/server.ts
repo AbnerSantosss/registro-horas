@@ -14,6 +14,8 @@ import tagRoutes from './routes/tags.js';
 import profileRoutes from './routes/profile.js';
 import platformRoutes from './routes/platforms.js';
 import brandRoutes from './routes/brands.js';
+import notificationRoutes from './routes/notifications.js';
+import cronRoutes from './routes/cron.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,6 +34,8 @@ app.use('/api/tags', tagRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/platforms', platformRoutes);
 app.use('/api/brands', brandRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/cron', cronRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', ambiente: process.env.NODE_ENV });
